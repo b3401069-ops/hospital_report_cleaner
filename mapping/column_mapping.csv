@@ -1,0 +1,15 @@
+source_column,target_column
+病歷號,patient_id
+病歷編號,patient_id
+姓名,patient_name
+病人姓名,patient_name
+檢查日期,report_date
+報告日期,report_date
+日期,report_date
+科別,department
+醫師,doctor
+主治醫師,doctor
+檢查項目,report_type
+報告類型,report_type
+結果,result
+報告內容,result

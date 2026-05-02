@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+output/*.xlsx
+output/*.csv
+raw/*.xlsx
+raw/*.xls
+raw/*.csv

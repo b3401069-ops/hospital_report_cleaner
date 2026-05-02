@@ -1,0 +1,9 @@
+icd10_code,cancer_type,diagnosis_text,notes
+C71.9,,腦惡性腫瘤,confirmed clean diagnosis
+C00.1,,下唇外側惡性腫瘤,confirmed clean diagnosis
+C12,,梨狀窩惡性腫瘤,confirmed clean diagnosis
+C44.21,,耳與外耳道皮膚基底細胞癌,confirmed clean diagnosis
+C44.42,,頭皮與頸部皮膚鱗狀細胞癌,confirmed clean diagnosis
+C65.2,,左側腎盂惡性腫瘤,confirmed clean diagnosis
+C82.98,,多部位淋巴結濾泡性淋巴瘤,confirmed clean diagnosis
+C86.0,,鼻型結外NK/T細胞淋巴瘤,confirmed clean diagnosis
