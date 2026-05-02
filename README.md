@@ -64,6 +64,69 @@ python -m report_cleaner.cli
 - `output/`：輸出結果
 - `src/report_cleaner/`：清洗程式
 
+## GitHub 協作流程
+
+建議把 `main` 當成正式可用版本，所有會影響清洗結果的修改都先走分支與 PR。
+
+### 分支命名
+
+- `main`：正式版本
+- `feature/...`：新增功能或欄位
+- `fix/...`：修正錯誤或規則
+- `review/...`：暫時性試作或 review 用分支
+
+例如：
+
+- `feature/add-treatment-dates`
+- `feature/add-icd10-mapping`
+- `fix/patient-key-rules`
+
+### 建議流程
+
+1. 先抓最新版本
+2. 從 `main` 開新分支
+3. 在分支上修改與測試
+4. Push 到 GitHub
+5. 開 Pull Request
+6. 由另一位使用者或 AI review
+7. 修正完成後再 merge 回 `main`
+
+### 常用指令
+
+```powershell
+git pull
+git checkout -b feature/add-treatment-dates
+```
+
+修改完成後：
+
+```powershell
+git add .
+git commit -m "Add separate treatment date fields"
+git push -u origin feature/add-treatment-dates
+```
+
+### 什麼情況建議開 PR
+
+- 新增或調整輸出欄位
+- 修改日期邏輯
+- 修改病人主鍵規則
+- 新增 ICD10 對照規則
+- 修改 TNM / final stage 規則
+- 修改摘要統計方式
+
+### 什麼情況可直接改 `main`
+
+- README 或操作文件的小幅修字
+- 不影響資料結果的純說明文字調整
+
+### 多電腦或多 AI 使用建議
+
+- 修改前先 `git pull`
+- 修改後再 `commit` + `push`
+- 另一台電腦或另一個 AI 開始前，先再 `git pull`
+- 若由兩個 AI 協作，建議一方負責實作，另一方負責 review，最後由同一邊整合後 merge
+
 ## 後續擴充方向
 
 - 不同報表格式的專屬解析器
