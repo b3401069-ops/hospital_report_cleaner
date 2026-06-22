@@ -1,27 +1,26 @@
+#!/usr/bin/env python3
+"""醫院報表清洗工具 - 主程式入口
+
+使用方式：
+  python main.py
+  
+將報表放入 raw/ 資料夾，執行後結果在 output/cleaned_reports.xlsx
+"""
 from __future__ import annotations
 
 import sys
 import os
 
-# 確保模組可以被找到
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.insert(0, current_dir)
+# 確保 src 目錄在 Python 路徑中
+project_root = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(project_root, "src")
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-try:
-    from src.report_cleaner.cleaner import export_cleaned_report, run_cleaning
-    from src.report_cleaner.config import build_paths
-except ImportError:
-    try:
-        from report_cleaner.cleaner import export_cleaned_report, run_cleaning
-        from report_cleaner.config import build_paths
-    except ImportError:
-        try:
-            from cleaner import export_cleaned_report, run_cleaning
-            from config import build_paths
-        except ImportError:
-            from .cleaner import export_cleaned_report, run_cleaning
-            from .config import build_paths
+from report_cleaner.cleaner import export_cleaned_report, run_cleaning
+from report_cleaner.config import build_paths
 
 
 def main() -> None:
