@@ -1,0 +1,4 @@
+cancer_type,tnm_pattern,final_stage,notes
+BR_乳癌,pT1ccN0M0,1,example
+BR_乳癌,cT1ccN0M0,1,example
+CR_結腸直腸癌,cT3N0M0,2,example

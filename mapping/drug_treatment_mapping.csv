@@ -1,0 +1,74 @@
+treatment_type,name_pattern,order_code,order_code_prefix,notes
+chemotherapy,fluorouracil,,,antimetabolite chemotherapy
+chemotherapy,pemetrexed,,,antimetabolite chemotherapy
+chemotherapy,doxorubicin,,,anthracycline chemotherapy
+chemotherapy,vinblastine,,,vinca alkaloid chemotherapy
+chemotherapy,etoposide,,,topoisomerase inhibitor chemotherapy
+chemotherapy,lurbinectedin,,,chemotherapy
+chemotherapy,cyclophosphamide,,,alkylating chemotherapy
+chemotherapy,methotrexate,,,antimetabolite chemotherapy
+chemotherapy,chlorambucil,,,alkylating chemotherapy
+chemotherapy,vinorelbine,,,vinca alkaloid chemotherapy
+chemotherapy,capecitabine,,,antimetabolite chemotherapy
+chemotherapy,azacitidine,,,hypomethylating chemotherapy
+chemotherapy,bleomycin,,,antitumor antibiotic chemotherapy
+chemotherapy,carboplatin,,,platinum chemotherapy
+chemotherapy,oxaliplatin,,,platinum chemotherapy
+chemotherapy,dacarbazine,,,alkylating chemotherapy
+chemotherapy,epirubicin,,,anthracycline chemotherapy
+chemotherapy,gemcitabine,,,antimetabolite chemotherapy
+chemotherapy,ifosfamide,,,alkylating chemotherapy
+chemotherapy,irinotecan,,,topoisomerase inhibitor chemotherapy
+chemotherapy,cisplatin,,,platinum chemotherapy
+chemotherapy,topotecan,,,topoisomerase inhibitor chemotherapy
+chemotherapy,vincristine,,,vinca alkaloid chemotherapy
+chemotherapy,paclitaxel,,,taxane chemotherapy
+chemotherapy,docetaxel,,,taxane chemotherapy
+chemotherapy,,I5FU2,,local order code
+chemotherapy,,IALI1,,local order code
+chemotherapy,,IALI2,,local order code
+chemotherapy,,IALI3,,local order code
+chemotherapy,,IALI4,,local order code
+chemotherapy,,IALI5,,local order code
+chemotherapy,,IALI6,,local order code
+chemotherapy,,IALI7,,local order code
+chemotherapy,,IALI8,,local order code
+targeted_therapy,bevacizumab,,,anti-VEGF targeted therapy
+targeted_therapy,brentuximab,,,antibody-drug conjugate targeted therapy
+targeted_therapy,everolimus,,,mTOR targeted therapy
+targeted_therapy,alectinib,,,ALK targeted therapy
+targeted_therapy,afatinib,,,EGFR targeted therapy
+targeted_therapy,zanubrutinib,,,BTK targeted therapy
+targeted_therapy,cabozantinib,,,TKI targeted therapy
+targeted_therapy,gefitinib,,,EGFR targeted therapy
+targeted_therapy,ruxolitinib,,,JAK targeted therapy
+targeted_therapy,palbociclib,,,CDK4/6 targeted therapy
+targeted_therapy,ibrutinib,,,BTK targeted therapy
+targeted_therapy,ribociclib,,,CDK4/6 targeted therapy
+targeted_therapy,lorlatinib,,,ALK/ROS1 targeted therapy
+targeted_therapy,olaparib,,,PARP targeted therapy
+targeted_therapy,erlotinib,,,EGFR targeted therapy
+targeted_therapy,sorafenib,,,TKI targeted therapy
+targeted_therapy,entrectinib,,,NTRK/ROS1 targeted therapy
+targeted_therapy,lenalidomide,,,immunomodulatory targeted therapy
+targeted_therapy,tepotinib,,,MET targeted therapy
+targeted_therapy,abemaciclib,,,CDK4/6 targeted therapy
+targeted_therapy,dacomitinib,,,EGFR targeted therapy
+targeted_therapy,lapatinib,,,HER2/EGFR targeted therapy
+targeted_therapy,ramucirumab,,,anti-VEGFR targeted therapy
+targeted_therapy,cetuximab,,,EGFR antibody targeted therapy
+targeted_therapy,trastuzumab,,,HER2 targeted therapy
+targeted_therapy,rituximab,,,CD20 antibody targeted therapy
+targeted_therapy,pertuzumab,,,HER2 targeted therapy
+targeted_therapy,bortezomib,,,proteasome targeted therapy
+immunotherapy,pembrolizumab,,,immune checkpoint inhibitor
+immunotherapy,nivolumab,,,immune checkpoint inhibitor
+immunotherapy,atezolizumab,,,immune checkpoint inhibitor
+immunotherapy,durvalumab,,,immune checkpoint inhibitor
+immunotherapy,ipilimumab,,,immune checkpoint inhibitor
+immunotherapy,tremelimumab,,,immune checkpoint inhibitor
+hormone_therapy,letrozole,,,aromatase inhibitor
+hormone_therapy,anastrozole,,,aromatase inhibitor
+hormone_therapy,exemestane,,,aromatase inhibitor
+hormone_therapy,tamoxifen,,,selective estrogen receptor modulator
+hormone_therapy,fulvestrant,,,estrogen receptor antagonist

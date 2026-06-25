@@ -1,0 +1,43 @@
+treatment_type,name_pattern,order_code,order_code_prefix,cancer_type,diagnosis_text,notes
+chemotherapy,,37038B,,,chemotherapy infusion order
+chemotherapy,,37039B,,,chemotherapy infusion order
+chemotherapy,,37040B,,,chemotherapy infusion order
+chemotherapy,,37041B,,,chemotherapy infusion order
+radiation_therapy,,36015B,,,radiation treatment planning
+tace,,33075BR,,,TAE/TACE vascular embolization
+tace,,33144BR,,,TAE/TACE vascular embolization with Lipiodol
+rfa,,37042C,,,RFA liver tumor ablation
+rfa,,37043C,,,RFA liver tumor ablation
+rfa,,37044C,,,RFA liver tumor ablation
+surgery,,63014B,,BR_乳癌,乳癌,breast surgery
+surgery,,63012B,,BR_乳癌,乳癌,breast surgery
+surgery,,63005C,,BR_乳癌,乳癌,breast surgery
+surgery,,63010C,,BR_乳癌,乳癌,breast surgery
+surgery,,63011C,,BR_乳癌,乳癌,breast surgery
+surgery,,63007B,,BR_乳癌,乳癌,breast surgery
+surgery,,63009C,,BR_乳癌,乳癌,breast surgery
+surgery,,63001B,,BR_乳癌,乳癌,breast surgery
+surgery,,63017B,,BR_乳癌,乳癌,breast surgery
+surgery,,63015B,,BR_乳癌,乳癌,breast surgery
+surgery,,63003B,,BR_乳癌,乳癌,breast surgery
+surgery,,63002B,,BR_乳癌,乳癌,breast surgery
+surgery,,73012B,,CR_結腸直腸癌,結腸直腸癌,colorectal surgery
+surgery,,74221B,,CR_結腸直腸癌,結腸直腸癌,colorectal surgery
+surgery,,73045B,,CR_結腸直腸癌,結腸直腸癌,colorectal surgery
+surgery,,73057B,,CR_結腸直腸癌,結腸直腸癌,colorectal surgery
+surgery,,73048B,,CR_結腸直腸癌,結腸直腸癌,colorectal surgery
+surgery,,73014B,,CR_結腸直腸癌,結腸直腸癌,colorectal surgery
+surgery,,74211B,,CR_結腸直腸癌,結腸直腸癌,colorectal surgery
+surgery,,74224B,,CR_結腸直腸癌,結腸直腸癌,colorectal surgery
+surgery,,74205B,,CR_結腸直腸癌,結腸直腸癌,colorectal surgery
+surgery,,75025B,,HC_肝癌,肝癌,liver surgery
+surgery,,75028B,,HC_肝癌,肝癌,liver surgery
+surgery,,75030B,,HC_肝癌,肝癌,liver surgery
+surgery,,75026B,,HC_肝癌,肝癌,liver surgery
+surgery,,75027B,,HC_肝癌,肝癌,liver surgery
+surgery,,75003B,,HC_肝癌,肝癌,liver surgery
+surgery,,75004B,,HC_肝癌,肝癌,liver surgery
+surgery,,75002B,,HC_肝癌,肝癌,liver surgery
+surgery,,75031B,,HC_肝癌,肝癌,liver surgery
+surgery,,50011C,,UB_膀胱癌,膀胱癌,bladder cancer procedure
+surgery,,78008C,,UB_膀胱癌,膀胱癌,bladder cancer surgery
