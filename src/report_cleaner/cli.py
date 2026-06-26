@@ -19,10 +19,11 @@ def main(argv: list[str] | None = None) -> None:
     paths = build_paths()
 
     if args.command == "export-mapping-review":
-        drug_file, order_file = export_mapping_review_files(paths)
+        drug_file, order_file, stage_file = export_mapping_review_files(paths)
         print("Mapping review CSV files generated.")
         print(f"Drug review: {drug_file}")
         print(f"Treatment order review: {order_file}")
+        print(f"TNM stage review: {stage_file}")
         return
 
     if args.command == "apply-mapping-review":
@@ -30,6 +31,7 @@ def main(argv: list[str] | None = None) -> None:
         print("Mapping review CSV files applied.")
         print(f"Drug mapping rows added: {result['drug_rows_added']}")
         print(f"Treatment order mapping rows added: {result['order_rows_added']}")
+        print(f"TNM stage mapping rows added: {result['stage_rows_added']}")
         return
 
     (
