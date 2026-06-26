@@ -1,4 +1,4 @@
-icd10_code,cancer_type,diagnosis_text,notes
+﻿icd10_code,cancer_type,diagnosis_text,notes
 C00.1,OC_口腔癌,下唇外側惡性腫瘤,manual primary-site mapping
 C05.1,OC_口腔癌,軟顎惡性腫瘤,manual primary-site mapping
 C12,OC_口腔癌(含口咽及下咽),梨狀窩惡性腫瘤,manual primary-site mapping

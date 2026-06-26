@@ -498,7 +498,7 @@ def _normalize_period_token(token: str, *, is_end: bool) -> str:
 def _load_column_mapping(mapping_file: Path) -> dict[str, str]:
     if not mapping_file.exists():
         return {}
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding="utf-8-sig").fillna("")
     return {
         row["source_column"].strip(): row["target_column"].strip()
         for _, row in mapping_frame.iterrows()
@@ -509,7 +509,7 @@ def _load_column_mapping(mapping_file: Path) -> dict[str, str]:
 def _load_value_mapping(mapping_file: Path) -> dict[str, dict[str, str]]:
     if not mapping_file.exists():
         return {}
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding="utf-8-sig").fillna("")
     mappings: dict[str, dict[str, str]] = {}
     for _, row in mapping_frame.iterrows():
         column = row["column"].strip()
@@ -524,7 +524,7 @@ def _load_value_mapping(mapping_file: Path) -> dict[str, dict[str, str]]:
 def _load_tnm_stage_mapping(mapping_file: Path) -> dict[tuple[str, str], str]:
     if not mapping_file.exists():
         return {}
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding="utf-8-sig").fillna("")
     mapping: dict[tuple[str, str], str] = {}
     for _, row in mapping_frame.iterrows():
         cancer_type = row.get("cancer_type", "").strip()
@@ -538,7 +538,7 @@ def _load_tnm_stage_mapping(mapping_file: Path) -> dict[tuple[str, str], str]:
 def _load_manual_icd10_mapping(mapping_file: Path) -> dict[str, tuple[str, str]]:
     if not mapping_file.exists():
         return {}
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding="utf-8-sig").fillna("")
     mapping: dict[str, tuple[str, str]] = {}
     for _, row in mapping_frame.iterrows():
         icd10_code = _normalize_icd10_code(row.get("icd10_code", ""))
@@ -553,7 +553,7 @@ def _load_manual_icd10_mapping(mapping_file: Path) -> dict[str, tuple[str, str]]
 def _load_drug_treatment_mapping(mapping_file: Path) -> list[dict[str, str]]:
     if not mapping_file.exists():
         return []
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding="utf-8-sig").fillna("")
     mappings: list[dict[str, str]] = []
     for _, row in mapping_frame.iterrows():
         treatment_type = row.get("treatment_type", "").strip()
@@ -578,7 +578,7 @@ def _load_drug_treatment_mapping(mapping_file: Path) -> list[dict[str, str]]:
 def _load_order_treatment_mapping(mapping_file: Path) -> list[dict[str, str]]:
     if not mapping_file.exists():
         return []
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding="utf-8-sig").fillna("")
     mappings: list[dict[str, str]] = []
     for _, row in mapping_frame.iterrows():
         treatment_type = row.get("treatment_type", "").strip()

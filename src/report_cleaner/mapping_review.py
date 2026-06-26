@@ -121,7 +121,7 @@ def _append_confirmed_mapping_rows(
     if not pending_file.exists():
         return 0
 
-    pending = pd.read_csv(pending_file, dtype=str).fillna("")
+    pending = pd.read_csv(pending_file, dtype=str, encoding="utf-8-sig").fillna("")
     pending = _ensure_columns(pending, mapping_columns)
     pending = pending[mapping_columns].copy()
     pending = pending.apply(lambda column: column.map(lambda value: str(value).strip()))
@@ -143,7 +143,7 @@ def _append_confirmed_mapping_rows(
         return 0
 
     if mapping_file.exists():
-        existing = pd.read_csv(mapping_file, dtype=str).fillna("")
+        existing = pd.read_csv(mapping_file, dtype=str, encoding="utf-8-sig").fillna("")
         existing = _ensure_columns(existing, mapping_columns)
         existing = existing[mapping_columns].copy()
     else:
