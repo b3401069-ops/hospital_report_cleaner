@@ -5,10 +5,7 @@ import re
 
 import pandas as pd
 
-try:
-    from .config import ProjectPaths
-except ImportError:
-    from config import ProjectPaths
+from .config import ProjectPaths
 
 SUPPORTED_SUFFIXES = {".xlsx", ".xls", ".csv"}
 SENSITIVE_COLUMN_PATTERNS = (
@@ -191,11 +188,42 @@ SPECIAL_CANCER_TYPE_LABELS = {
     "LCA": "喉癌",
     "XX": "未分類",
 }
+COLUMN_ALIASES = {
+    "姓名": ["patient_name", "姓名", "病人姓名", "病患姓名"],
+    "病人姓名": ["patient_name", "姓名", "病人姓名", "病患姓名"],
+    "病患姓名": ["patient_name", "姓名", "病人姓名", "病患姓名"],
+    "性別": ["sex", "性別"],
+    "病歷號": ["medical_record_no", "patient_id", "病歷號", "病歷編號", "病歷號碼"],
+    "病歷編號": ["medical_record_no", "patient_id", "病歷號", "病歷編號", "病歷號碼"],
+    "病歷號碼": ["medical_record_no", "patient_id", "病歷號", "病歷編號", "病歷號碼"],
+    "出生日期": ["birth_date", "出生日期", "生日"],
+    "生日": ["birth_date", "出生日期", "生日"],
+    "年齡": ["age_at_diagnosis", "年齡"],
+    "最初診斷日期": ["diagnosis_date", "最初診斷日期", "診斷日"],
+    "診斷日": ["diagnosis_date", "最初診斷日期", "診斷日"],
+    "死亡日期": ["death_date", "死亡日期"],
+    "最近看診日": ["last_followup_date", "最近看診日", "最近追蹤日"],
+    "最近追蹤日": ["last_followup_date", "最近看診日", "最近追蹤日"],
+    "癌別": ["cancer_type", "癌別"],
+    "癌別說明": ["癌別說明"],
+    "主責醫師": ["doctor", "主責醫師", "醫師", "主治醫師"],
+    "收案個管師": ["manager", "收案個管師"],
+}
 
 
 def run_cleaning(
     paths: ProjectPaths,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, list[str]]:
+) -> tuple[
+    pd.DataFrame,
+    pd.DataFrame,
+    pd.DataFrame,
+    pd.DataFrame,
+    pd.DataFrame,
+    pd.DataFrame,
+    pd.DataFrame,
+    pd.DataFrame,
+    list[str],
+]:
     files = _collect_source_files(paths.raw_dir)
     if not files:
         raise FileNotFoundError("No source reports were found in raw/.")
@@ -204,6 +232,8 @@ def run_cleaning(
     value_mapping = _load_value_mapping(paths.value_mapping_file)
     tnm_stage_mapping = _load_tnm_stage_mapping(paths.tnm_stage_mapping_file)
     manual_icd10_mapping = _load_manual_icd10_mapping(paths.icd10_mapping_file)
+    drug_treatment_mapping = _load_drug_treatment_mapping(paths.drug_treatment_mapping_file)
+    order_treatment_mapping = _load_order_treatment_mapping(paths.order_treatment_mapping_file)
 
     cleaned_frames: list[pd.DataFrame] = []
     standardized_frames: list[pd.DataFrame] = []
@@ -218,26 +248,6 @@ def run_cleaning(
         patient_lookup = _merge_patient_lookup(patient_lookup, _extract_patient_lookup(frame))
         frame = _drop_sensitive_columns(frame)
         frame = frame.rename(columns=column_mapping)
-        # 合併重複的欄位名：對於每個重複的欄位，合併所有相關列的數據
-        if frame.columns.duplicated().any():
-            # 找出所有重複的欄位名
-            duplicated_cols = frame.columns[frame.columns.duplicated()].unique()
-            for col in duplicated_cols:
-                # 獲取所有相關列的索引
-                col_indices = [i for i, c in enumerate(frame.columns) if c == col]
-                if len(col_indices) < 2:
-                    continue
-                # 取第一列作為基礎
-                base_col_idx = col_indices[0]
-                base_series = frame.iloc[:, base_col_idx]
-                # 依次與其他列合併（使用 combine_first）
-                for idx in col_indices[1:]:
-                    other_series = frame.iloc[:, idx]
-                    base_series = base_series.combine_first(other_series)
-                # 刪除所有重複的列
-                frame = frame.drop(frame.columns[col_indices], axis=1)
-                # 插入合併後的列到原來第一個位置
-                frame.insert(base_col_idx, col, base_series)
         frame = _drop_empty_and_summary_rows(frame)
         frame = _normalize_text_cells(frame)
         frame = _apply_value_mapping(frame, value_mapping)
@@ -250,7 +260,13 @@ def run_cleaning(
         cleaned_frames.append(frame)
         standardized_frames.append(
             _build_standardized_frame(
-                frame, source_file.stem, source_file.name, period_start, period_end
+                frame,
+                source_file.stem,
+                source_file.name,
+                period_start,
+                period_end,
+                drug_treatment_mapping,
+                order_treatment_mapping,
             )
         )
         processed_files.append(source_file.name)
@@ -282,6 +298,8 @@ def run_cleaning(
     patient_list = _build_patient_list(patient_master)
     unmatched_icd10 = _build_unmatched_icd10_report(standardized)
     stage_review = _build_stage_review_report(standardized)
+    unmapped_drug_orders = _build_unmapped_drug_orders_report(standardized)
+    unmapped_treatment_orders = _build_unmapped_treatment_orders_report(standardized)
 
     return (
         combined,
@@ -290,6 +308,8 @@ def run_cleaning(
         patient_list,
         unmatched_icd10,
         stage_review,
+        unmapped_drug_orders,
+        unmapped_treatment_orders,
         processed_files,
     )
 
@@ -301,6 +321,8 @@ def export_cleaned_report(
     patient_list_frame: pd.DataFrame,
     unmatched_icd10_frame: pd.DataFrame,
     stage_review_frame: pd.DataFrame,
+    unmapped_drug_orders_frame: pd.DataFrame,
+    unmapped_treatment_orders_frame: pd.DataFrame,
     output_file: Path,
 ) -> Path:
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -318,6 +340,8 @@ def export_cleaned_report(
         summary_trend_zh_frame.to_excel(writer, index=False, sheet_name="summary_trend_zh")
         unmatched_icd10_frame.to_excel(writer, index=False, sheet_name="unmatched_icd10")
         stage_review_frame.to_excel(writer, index=False, sheet_name="stage_review")
+        unmapped_drug_orders_frame.to_excel(writer, index=False, sheet_name="unmapped_drug_orders")
+        unmapped_treatment_orders_frame.to_excel(writer, index=False, sheet_name="unmapped_treatment_orders")
     return target_file
 
 
@@ -526,6 +550,59 @@ def _load_manual_icd10_mapping(mapping_file: Path) -> dict[str, tuple[str, str]]
     return mapping
 
 
+def _load_drug_treatment_mapping(mapping_file: Path) -> list[dict[str, str]]:
+    if not mapping_file.exists():
+        return []
+    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mappings: list[dict[str, str]] = []
+    for _, row in mapping_frame.iterrows():
+        treatment_type = row.get("treatment_type", "").strip()
+        if treatment_type not in {
+            "chemotherapy",
+            "targeted_therapy",
+            "immunotherapy",
+            "hormone_therapy",
+        }:
+            continue
+        mappings.append(
+            {
+                "treatment_type": treatment_type,
+                "name_pattern": row.get("name_pattern", "").strip(),
+                "order_code": row.get("order_code", "").strip().upper(),
+                "order_code_prefix": row.get("order_code_prefix", "").strip().upper(),
+            }
+        )
+    return mappings
+
+
+def _load_order_treatment_mapping(mapping_file: Path) -> list[dict[str, str]]:
+    if not mapping_file.exists():
+        return []
+    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mappings: list[dict[str, str]] = []
+    for _, row in mapping_frame.iterrows():
+        treatment_type = row.get("treatment_type", "").strip()
+        if treatment_type not in {
+            "chemotherapy",
+            "radiation_therapy",
+            "surgery",
+            "tace",
+            "rfa",
+        }:
+            continue
+        mappings.append(
+            {
+                "treatment_type": treatment_type,
+                "name_pattern": row.get("name_pattern", "").strip(),
+                "order_code": row.get("order_code", "").strip().upper(),
+                "order_code_prefix": row.get("order_code_prefix", "").strip().upper(),
+                "cancer_type": row.get("cancer_type", "").strip(),
+                "diagnosis_text": row.get("diagnosis_text", "").strip(),
+            }
+        )
+    return mappings
+
+
 def _normalize_columns(frame: pd.DataFrame) -> pd.DataFrame:
     frame = frame.copy()
     frame.columns = [str(column).strip() for column in frame.columns]
@@ -597,12 +674,19 @@ def _normalize_date_value(value: object) -> object:
         return ""
 
     digits = re.sub(r"\D", "", text)
-    if len(digits) == 7:
-        digits = str(int(digits[:3]) + 1911) + digits[3:]
+    if digits and digits[:3].isdigit():
+        first_three = int(digits[:3])
+        first_four = int(digits[:4]) if len(digits) >= 4 and digits[:4].isdigit() else 9999
+        if first_three <= 300 and first_four < 1911 and len(digits) in (7, 11, 12, 13):
+            digits = str(first_three + 1911) + digits[3:]
     if len(digits) == 8:
         return f"{digits[:4]}-{digits[4:6]}-{digits[6:8]}"
+    if len(digits) == 11:
+        return f"{digits[:4]}-{digits[4:6]}-{digits[6:8]} {digits[8:10]}:{digits[10:11]}0"
     if len(digits) == 12:
         return f"{digits[:4]}-{digits[4:6]}-{digits[6:8]} {digits[8:10]}:{digits[10:12]}"
+    if len(digits) == 13:
+        return f"{digits[:4]}-{digits[4:6]}-{digits[6:8]} {digits[8:10]}:{digits[10:12]}:{digits[12:13]}0"
     if len(digits) == 14:
         return (
             f"{digits[:4]}-{digits[4:6]}-{digits[6:8]} "
@@ -623,14 +707,34 @@ def _build_standardized_frame(
     source_file: str,
     period_start: str,
     period_end: str,
+    drug_treatment_mapping: list[dict[str, str]] | None = None,
+    order_treatment_mapping: list[dict[str, str]] | None = None,
 ) -> pd.DataFrame:
+    if {"醫令代碼", "醫令名稱"}.issubset(frame.columns):
+        return _standardize_order_detail(
+            frame,
+            report_name,
+            source_file,
+            period_start,
+            period_end,
+            order_treatment_mapping,
+        )
+    if {"醫令碼", "名稱"}.issubset(frame.columns):
+        return _standardize_guideline_drug(
+            frame,
+            report_name,
+            source_file,
+            period_start,
+            period_end,
+            drug_treatment_mapping,
+        )
     if "化療流程時間" in report_name:
         return _standardize_chemo_timeline(frame, report_name, source_file, period_start, period_end)
     if "化療名單" in report_name:
         return _standardize_chemo_list(frame, report_name, source_file, period_start, period_end)
     if "TNM" in report_name:
         return _standardize_tnm(frame, report_name, source_file, period_start, period_end)
-    if "治療計畫書" in report_name:
+    if "治療計畫書" in report_name or "計畫書" in report_name or "收案清單" in report_name:
         return _standardize_treatment_plan(frame, report_name, source_file, period_start, period_end)
     if "住院人次人日" in report_name:
         return _standardize_inpatient(frame, report_name, source_file, period_start, period_end)
@@ -640,12 +744,6 @@ def _build_standardized_frame(
     standardized["source_file"] = source_file
     standardized["report_period_start"] = period_start
     standardized["report_period_end"] = period_end
-    
-    # 确保所有STANDARD_COLUMNS列都存在，缺失的用空字符串填充
-    for col in STANDARD_COLUMNS:
-        if col not in standardized.columns:
-            standardized[col] = ""
-    
     return _reorder_columns(standardized, STANDARD_COLUMNS)
 
 
@@ -728,14 +826,21 @@ def _standardize_tnm(
             "death_date": _column_or_blank(frame, "死亡日期"),
             "last_followup_date": last_followup,
             "cancer_type": _column_or_blank(frame, "癌別"),
-            "icd10_code": _extract_icd10_from_cancer_type(_column_or_blank(frame, "癌別")),
-            "diagnosis_text": _extract_text_from_cancer_type(_column_or_blank(frame, "癌別")),
+            "icd10_code": _first_non_blank_series(
+                _extract_icd10_series(_column_or_blank(frame, "癌別說明")),
+                _extract_icd10_from_cancer_type(_column_or_blank(frame, "癌別")),
+            ),
+            "diagnosis_text": _first_non_blank_series(
+                _first_available_column(frame, ["簡稱"]),
+                _extract_diagnosis_text_from_description(_column_or_blank(frame, "癌別說明")),
+                _extract_text_from_cancer_type(_column_or_blank(frame, "癌別")),
+            ),
             "clinical_tnm": _extract_clinical_tnm(_column_or_blank(frame, "組合")),
             "pathologic_tnm": _extract_pathologic_tnm(_column_or_blank(frame, "組合")),
             "final_stage": _column_or_blank(frame, "期別"),
             "case_category_code": _extract_case_category_code(_column_or_blank(frame, "個案分類")),
             "case_category_label": _extract_case_category_label(_column_or_blank(frame, "個案分類")),
-            "doctor": "",
+            "doctor": _column_or_blank(frame, "主責醫師"),
             "manager": _column_or_blank(frame, "收案個管師"),
             "chemotherapy": _yes_if_any(frame, ["化學治療填寫日期"]),
             "chemotherapy_date": _column_or_blank(frame, "化學治療填寫日期"),
@@ -772,10 +877,33 @@ def _standardize_treatment_plan(
     frame: pd.DataFrame, report_name: str, source_file: str, period_start: str, period_end: str
 ) -> pd.DataFrame:
     diagnosis_date = _first_non_blank_series(
-        _column_or_blank(frame, "最初診斷日期"), _column_or_blank(frame, "收案日期")
+        _column_or_blank(frame, "最初診斷日期"),
+        _column_or_blank(frame, "初次診斷日期"),
+        _column_or_blank(frame, "收案日期"),
     )
     case_date = _first_non_blank_series(
         _column_or_blank(frame, "收案日期"), _column_or_blank(frame, "最初診斷日期")
+    )
+    chemo_date = _first_non_blank_series(
+        _column_or_blank(frame, "化學治療填寫日期1"),
+        _column_or_blank(frame, "化學治療填寫日期2"),
+        _column_or_blank(frame, "化學治療填寫日期"),
+        _column_or_blank(frame, "化療填寫日期"),
+        _column_or_blank(frame, "口服化療日期"),
+        _column_or_blank(frame, "口服填寫日期"),
+    )
+    targeted_date = _first_non_blank_series(
+        _column_or_blank(frame, "標靶治療日期"),
+        _column_or_blank(frame, "標靶填寫日期"),
+    )
+    hormone_date = _first_non_blank_series(
+        _column_or_blank(frame, "荷爾蒙治療日期"),
+        _column_or_blank(frame, "賀爾蒙填寫日期"),
+    )
+    radiation_date = _first_non_blank_series(
+        _column_or_blank(frame, "放射線治療填寫日期"),
+        _column_or_blank(frame, "電療填寫日期"),
+        _column_or_blank(frame, "CCRT填寫日期"),
     )
     standardized = pd.DataFrame(
         {
@@ -794,31 +922,28 @@ def _standardize_treatment_plan(
             "last_followup_date": "",
             "cancer_type": _column_or_blank(frame, "癌別"),
             "icd10_code": _extract_icd10_series(_column_or_blank(frame, "癌別說明")),
-            "diagnosis_text": _extract_text_from_cancer_type(_column_or_blank(frame, "癌別")),
+            "diagnosis_text": _first_non_blank_series(
+                _first_available_column(frame, ["簡稱"]),
+                _extract_diagnosis_text_from_description(_column_or_blank(frame, "癌別說明")),
+                _extract_text_from_cancer_type(_column_or_blank(frame, "癌別")),
+            ),
             "clinical_tnm": "",
             "pathologic_tnm": "",
             "final_stage": "",
             "case_category_code": _extract_case_category_code(_column_or_blank(frame, "個案分類")),
             "case_category_label": _extract_case_category_label(_column_or_blank(frame, "個案分類")),
-            "doctor": "",
-            "manager": "",
-            "chemotherapy": _yes_if_any(frame, ["化學治療填寫日期1", "化學治療填寫日期2", "口服化療日期"]),
-            "chemotherapy_date": _first_non_blank_series(
-                _column_or_blank(frame, "化學治療填寫日期1"),
-                _column_or_blank(frame, "化學治療填寫日期2"),
-                _column_or_blank(frame, "口服化療日期"),
-            ),
-            "targeted_therapy": _yes_if_any(frame, ["標靶治療日期"]),
-            "targeted_therapy_date": _column_or_blank(frame, "標靶治療日期"),
+            "doctor": _first_available_column(frame, ["主責醫師", "主治醫師", "填表醫師"]),
+            "manager": _column_or_blank(frame, "收案個管師"),
+            "chemotherapy": chemo_date.map(lambda value: "Y" if str(value).strip() else ""),
+            "chemotherapy_date": chemo_date,
+            "targeted_therapy": targeted_date.map(lambda value: "Y" if str(value).strip() else ""),
+            "targeted_therapy_date": targeted_date,
             "immunotherapy": _yes_if_any(frame, ["免疫治療填寫日期"]),
             "immunotherapy_date": _column_or_blank(frame, "免疫治療填寫日期"),
-            "hormone_therapy": _yes_if_any(frame, ["荷爾蒙治療日期"]),
-            "hormone_therapy_date": _column_or_blank(frame, "荷爾蒙治療日期"),
-            "radiation_therapy": _yes_if_any(frame, ["放射線治療填寫日期", "CCRT填寫日期"]),
-            "radiation_therapy_date": _first_non_blank_series(
-                _column_or_blank(frame, "放射線治療填寫日期"),
-                _column_or_blank(frame, "CCRT填寫日期"),
-            ),
+            "hormone_therapy": hormone_date.map(lambda value: "Y" if str(value).strip() else ""),
+            "hormone_therapy_date": hormone_date,
+            "radiation_therapy": radiation_date.map(lambda value: "Y" if str(value).strip() else ""),
+            "radiation_therapy_date": radiation_date,
             "surgery": _yes_if_any(frame, ["手術填寫日期"]),
             "surgery_date": _column_or_blank(frame, "手術填寫日期"),
             "tace": _yes_if_any(frame, ["動脈栓塞"]),
@@ -837,6 +962,72 @@ def _standardize_treatment_plan(
         standardized["diagnosis_date"],
         _first_non_blank_series(standardized["death_date"], standardized["last_followup_date"]),
     )
+    return _reorder_columns(standardized, STANDARD_COLUMNS)
+
+
+def _standardize_guideline_drug(
+    frame: pd.DataFrame,
+    report_name: str,
+    source_file: str,
+    period_start: str,
+    period_end: str,
+    drug_treatment_mapping: list[dict[str, str]] | None = None,
+) -> pd.DataFrame:
+    order_code = _column_or_blank(frame, "醫令碼")
+    order_name = _column_or_blank(frame, "名稱")
+    order_date = _column_or_blank(frame, "開單日期")
+    treatment_flags = _classify_drug_treatment(order_code, order_name, drug_treatment_mapping)
+    standardized = pd.DataFrame(
+        {
+            "report_name": report_name,
+            "source_file": source_file,
+            "report_period_start": period_start,
+            "report_period_end": period_end,
+            "patient_name": "",
+            "sex": "",
+            "medical_record_no": _column_or_blank(frame, "病歷號"),
+            "case_id": "",
+            "birth_date": "",
+            "diagnosis_date": order_date,
+            "case_date": order_date,
+            "death_date": "",
+            "last_followup_date": "",
+            "survival_days": "",
+            "cancer_type": "",
+            "icd10_code": _extract_icd10_series(_column_or_blank(frame, "主診斷")),
+            "diagnosis_text": _column_or_blank(frame, "診斷名稱"),
+            "clinical_tnm": "",
+            "pathologic_tnm": "",
+            "final_stage": "",
+            "case_category_code": "",
+            "case_category_label": "",
+            "doctor": _column_or_blank(frame, "主治醫師"),
+            "manager": "",
+            "chemotherapy": treatment_flags["chemotherapy"],
+            "chemotherapy_date": order_date.where(treatment_flags["chemotherapy"] == "Y", ""),
+            "targeted_therapy": treatment_flags["targeted_therapy"],
+            "targeted_therapy_date": order_date.where(treatment_flags["targeted_therapy"] == "Y", ""),
+            "immunotherapy": treatment_flags["immunotherapy"],
+            "immunotherapy_date": order_date.where(treatment_flags["immunotherapy"] == "Y", ""),
+            "hormone_therapy": treatment_flags["hormone_therapy"],
+            "hormone_therapy_date": order_date.where(treatment_flags["hormone_therapy"] == "Y", ""),
+            "radiation_therapy": "",
+            "radiation_therapy_date": "",
+            "surgery": "",
+            "surgery_date": "",
+            "tace": "",
+            "tace_date": "",
+            "rfa": "",
+            "rfa_date": "",
+            "treatment_status": "",
+            "report_date": order_date,
+            "location": _column_or_blank(frame, "床位"),
+            "order_code": order_code,
+            "order_name": order_name,
+            "department_code": _column_or_blank(frame, "科別"),
+        }
+    )
+    standardized["age_at_diagnosis"] = ""
     return _reorder_columns(standardized, STANDARD_COLUMNS)
 
 
@@ -887,6 +1078,102 @@ def _standardize_chemo_timeline(
             "treatment_status": "",
             "report_date": _column_or_blank(frame, "化療日期"),
             "location": _column_or_blank(frame, "床號"),
+        }
+    )
+    standardized["age_at_diagnosis"] = _calculate_age_series(
+        standardized["birth_date"], standardized["diagnosis_date"]
+    )
+    standardized["survival_days"] = _calculate_day_diff_series(
+        standardized["diagnosis_date"],
+        _first_non_blank_series(standardized["death_date"], standardized["last_followup_date"]),
+    )
+    return _reorder_columns(standardized, STANDARD_COLUMNS)
+
+
+def _standardize_order_detail(
+    frame: pd.DataFrame,
+    report_name: str,
+    source_file: str,
+    period_start: str,
+    period_end: str,
+    order_treatment_mapping: list[dict[str, str]] | None = None,
+) -> pd.DataFrame:
+    order_code = _column_or_blank(frame, "醫令代碼")
+    order_name = _column_or_blank(frame, "醫令名稱")
+    encounter_id = _first_non_blank_series(_column_or_blank(frame, "住院號"), _column_or_blank(frame, "就醫序號"))
+    order_start = _first_non_blank_series(_column_or_blank(frame, "執行日期-起"), _column_or_blank(frame, "看診日期"))
+    diagnosis_date = _first_non_blank_series(_column_or_blank(frame, "看診日期"), order_start)
+    case_date = _first_non_blank_series(_column_or_blank(frame, "住院日"), _column_or_blank(frame, "看診日期"))
+    last_followup = _first_non_blank_series(_column_or_blank(frame, "出院日"), _column_or_blank(frame, "切帳日"))
+    cancer_type, diagnosis_text = _infer_cancer_from_report_name(report_name)
+    treatment_flags = _classify_order_treatment(
+        report_name, order_code, order_name, order_treatment_mapping
+    )
+    mapped_cancer_type = _map_order_rule_value(
+        order_code, order_name, order_treatment_mapping, "cancer_type"
+    )
+    mapped_diagnosis_text = _map_order_rule_value(
+        order_code, order_name, order_treatment_mapping, "diagnosis_text"
+    )
+
+    standardized = pd.DataFrame(
+        {
+            "report_name": report_name,
+            "source_file": source_file,
+            "report_period_start": period_start,
+            "report_period_end": period_end,
+            "patient_name": _first_available_column(frame, ["姓名", "病人姓名", "病患姓名"]),
+            "sex": _first_available_column(frame, ["性別"]),
+            "medical_record_no": _first_available_column(frame, ["病歷號", "病歷編號", "病歷號碼"]),
+            "case_id": "",
+            "birth_date": _first_available_column(frame, ["出生日期", "生日"]),
+            "diagnosis_date": diagnosis_date,
+            "case_date": case_date,
+            "death_date": "",
+            "last_followup_date": last_followup,
+            "cancer_type": _first_non_blank_series(
+                mapped_cancer_type,
+                pd.Series(cancer_type, index=frame.index, dtype="object"),
+            ),
+            "icd10_code": "",
+            "diagnosis_text": _first_non_blank_series(
+                mapped_diagnosis_text,
+                pd.Series(diagnosis_text, index=frame.index, dtype="object"),
+            ),
+            "clinical_tnm": "",
+            "pathologic_tnm": "",
+            "final_stage": "",
+            "case_category_code": "",
+            "case_category_label": "",
+            "doctor": _first_non_blank_series(_column_or_blank(frame, "執行醫師"), _column_or_blank(frame, "業績醫師")),
+            "manager": "",
+            "chemotherapy": treatment_flags["chemotherapy"],
+            "chemotherapy_date": order_start.where(treatment_flags["chemotherapy"] == "Y", ""),
+            "targeted_therapy": "",
+            "targeted_therapy_date": "",
+            "immunotherapy": "",
+            "immunotherapy_date": "",
+            "hormone_therapy": "",
+            "hormone_therapy_date": "",
+            "radiation_therapy": treatment_flags["radiation_therapy"],
+            "radiation_therapy_date": order_start.where(treatment_flags["radiation_therapy"] == "Y", ""),
+            "surgery": treatment_flags["surgery"],
+            "surgery_date": order_start.where(treatment_flags["surgery"] == "Y", ""),
+            "tace": treatment_flags["tace"],
+            "tace_date": order_start.where(treatment_flags["tace"] == "Y", ""),
+            "rfa": treatment_flags["rfa"],
+            "rfa_date": order_start.where(treatment_flags["rfa"] == "Y", ""),
+            "treatment_status": _column_or_blank(frame, "報"),
+            "report_date": order_start,
+            "location": _column_or_blank(frame, "床號"),
+            "encounter_id": encounter_id,
+            "visit_type": _column_or_blank(frame, "類別"),
+            "order_code": order_code,
+            "order_name": order_name,
+            "department_code": _column_or_blank(frame, "科別"),
+            "department_name": _column_or_blank(frame, "科別名"),
+            "admission_date": _column_or_blank(frame, "住院日"),
+            "discharge_date": _column_or_blank(frame, "出院日"),
         }
     )
     standardized["age_at_diagnosis"] = _calculate_age_series(
@@ -966,16 +1253,26 @@ def _standardize_inpatient(
 
 
 def _column_or_blank(frame: pd.DataFrame, column: str) -> pd.Series:
-    if column in frame.columns:
-        return frame[column].fillna("").astype(str).str.strip()
+    for candidate in _column_candidates(column):
+        if candidate in frame.columns:
+            return frame[candidate].fillna("").astype(str).str.strip()
     return pd.Series([""] * len(frame), index=frame.index, dtype="object")
 
 
 def _first_available_column(frame: pd.DataFrame, columns: list[str]) -> pd.Series:
     for column in columns:
-        if column in frame.columns:
-            return _column_or_blank(frame, column)
+        for candidate in _column_candidates(column):
+            if candidate in frame.columns:
+                return _column_or_blank(frame, candidate)
     return pd.Series([""] * len(frame), index=frame.index, dtype="object")
+
+
+def _column_candidates(column: str) -> list[str]:
+    candidates = [column]
+    for candidate in COLUMN_ALIASES.get(column, []):
+        if candidate not in candidates:
+            candidates.append(candidate)
+    return candidates
 
 
 def _first_non_blank_series(*series_list: pd.Series) -> pd.Series:
@@ -1041,9 +1338,207 @@ def _extract_icd10_from_cancer_type(values: pd.Series) -> pd.Series:
     return _extract_icd10_series(values)
 
 
+def _extract_diagnosis_text_from_description(values: pd.Series) -> pd.Series:
+    cleaned = values.fillna("").astype(str).str.strip()
+    text = cleaned.str.replace(r"^[A-Z]\d{2}(?:\.\d{1,2})?\s*", "", regex=True).str.strip()
+    return text.where(text != cleaned, text)
+
+
 def _extract_text_from_cancer_type(values: pd.Series) -> pd.Series:
     cleaned = values.fillna("").astype(str).str.strip()
     return cleaned.str.replace(r"^[A-Z]{2,3}_", "", regex=True)
+
+
+def _infer_cancer_from_report_name(report_name: str) -> tuple[str, str]:
+    if "乳房" in report_name:
+        return "BR_乳癌", "乳癌"
+    if "膀胱" in report_name:
+        return "UB_膀胱癌", "膀胱癌"
+    if "肝癌" in report_name:
+        return "HC_肝癌", "肝癌"
+    if "腸癌" in report_name:
+        return "CR_結腸直腸癌", "結腸直腸癌"
+    return "", ""
+
+
+def _classify_order_treatment(
+    report_name: str,
+    order_code: pd.Series,
+    order_name: pd.Series,
+    order_treatment_mapping: list[dict[str, str]] | None = None,
+) -> dict[str, pd.Series]:
+    report_series = pd.Series(report_name, index=order_code.index, dtype="object").fillna("")
+    code_series = order_code.fillna("").astype(str)
+    name_series = order_name.fillna("").astype(str)
+    categories = {
+        "chemotherapy": pd.Series(False, index=order_code.index, dtype="bool"),
+        "radiation_therapy": pd.Series(False, index=order_code.index, dtype="bool"),
+        "surgery": pd.Series(False, index=order_code.index, dtype="bool"),
+        "tace": pd.Series(False, index=order_code.index, dtype="bool"),
+        "rfa": pd.Series(False, index=order_code.index, dtype="bool"),
+    }
+
+    for rule in order_treatment_mapping or []:
+        treatment_type = rule["treatment_type"]
+        categories[treatment_type] = categories[treatment_type] | _order_rule_mask(
+            order_code, order_name, rule
+        )
+
+    already_classified = (
+        categories["chemotherapy"]
+        | categories["radiation_therapy"]
+        | categories["surgery"]
+        | categories["tace"]
+        | categories["rfa"]
+    )
+
+    chemotherapy = (
+        report_series.str.contains("化療", na=False)
+        | name_series.str.contains("化學藥物", na=False)
+        | code_series.isin(["37038B", "37039B", "37040B", "37041B"])
+    ) & ~already_classified
+    rfa = (
+        report_series.str.contains("RFA", na=False)
+        | name_series.str.contains("無線頻率電熱療法|射頻燒灼|RFA", na=False)
+        | code_series.isin(["37042C", "37043C", "37044C"])
+    ) & ~already_classified
+    tace = (
+        report_series.str.contains("TAE|TACE", na=False)
+        | name_series.str.contains("血管阻塞術|動脈栓塞", na=False)
+        | code_series.isin(["33075BR", "33144BR"])
+    ) & ~rfa & ~already_classified
+    surgery = (
+        report_series.str.contains("手術", na=False)
+        | name_series.str.contains("切除術|摘除術|手術", na=False)
+    ) & ~rfa & ~tace & ~chemotherapy & ~already_classified
+    radiation = (
+        report_series.str.contains("^RT|放腫|放射|電療", na=False)
+        | name_series.str.contains("放射|電療|治療規劃", na=False)
+    ) & ~tace & ~already_classified
+
+    categories["chemotherapy"] = categories["chemotherapy"] | chemotherapy
+    categories["radiation_therapy"] = categories["radiation_therapy"] | radiation
+    categories["surgery"] = categories["surgery"] | surgery
+    categories["tace"] = categories["tace"] | tace
+    categories["rfa"] = categories["rfa"] | rfa
+
+    return {
+        "chemotherapy": categories["chemotherapy"].map({True: "Y", False: ""}),
+        "radiation_therapy": categories["radiation_therapy"].map({True: "Y", False: ""}),
+        "surgery": categories["surgery"].map({True: "Y", False: ""}),
+        "tace": categories["tace"].map({True: "Y", False: ""}),
+        "rfa": categories["rfa"].map({True: "Y", False: ""}),
+    }
+
+
+def _order_rule_mask(
+    order_code: pd.Series, order_name: pd.Series, rule: dict[str, str]
+) -> pd.Series:
+    code_series = order_code.fillna("").astype(str).str.upper()
+    name_series = order_name.fillna("").astype(str)
+    mask = pd.Series(False, index=order_code.index, dtype="bool")
+    order_code_exact = rule.get("order_code", "")
+    order_code_prefix = rule.get("order_code_prefix", "")
+    name_pattern = rule.get("name_pattern", "")
+    if order_code_exact:
+        mask = mask | (code_series == order_code_exact)
+    if order_code_prefix:
+        mask = mask | code_series.str.startswith(order_code_prefix)
+    if name_pattern:
+        mask = mask | name_series.str.contains(name_pattern, case=False, regex=True, na=False)
+    return mask
+
+
+def _map_order_rule_value(
+    order_code: pd.Series,
+    order_name: pd.Series,
+    order_treatment_mapping: list[dict[str, str]] | None,
+    target_column: str,
+) -> pd.Series:
+    result = pd.Series([""] * len(order_code), index=order_code.index, dtype="object")
+    for rule in order_treatment_mapping or []:
+        value = rule.get(target_column, "")
+        if not value:
+            continue
+        mask = _order_rule_mask(order_code, order_name, rule) & (result == "")
+        result = result.where(~mask, value)
+    return result
+
+
+def _classify_drug_treatment(
+    order_code: pd.Series,
+    order_name: pd.Series,
+    drug_treatment_mapping: list[dict[str, str]] | None = None,
+) -> dict[str, pd.Series]:
+    name_series = order_name.fillna("").astype(str).str.lower()
+    code_series = order_code.fillna("").astype(str).str.upper()
+    categories = {
+        "chemotherapy": pd.Series(False, index=order_code.index, dtype="bool"),
+        "targeted_therapy": pd.Series(False, index=order_code.index, dtype="bool"),
+        "immunotherapy": pd.Series(False, index=order_code.index, dtype="bool"),
+        "hormone_therapy": pd.Series(False, index=order_code.index, dtype="bool"),
+    }
+
+    for rule in drug_treatment_mapping or []:
+        treatment_type = rule["treatment_type"]
+        mask = pd.Series(False, index=order_code.index, dtype="bool")
+        order_code_exact = rule.get("order_code", "")
+        order_code_prefix = rule.get("order_code_prefix", "")
+        name_pattern = rule.get("name_pattern", "")
+        if order_code_exact:
+            mask = mask | (code_series == order_code_exact)
+        if order_code_prefix:
+            mask = mask | code_series.str.startswith(order_code_prefix)
+        if name_pattern:
+            mask = mask | name_series.str.contains(name_pattern, case=False, regex=True, na=False)
+        categories[treatment_type] = categories[treatment_type] | mask
+
+    already_classified = (
+        categories["chemotherapy"]
+        | categories["targeted_therapy"]
+        | categories["immunotherapy"]
+        | categories["hormone_therapy"]
+    )
+
+    hormone = name_series.str.contains(
+        "letrozole|anastrozole|exemestane|tamoxifen|fulvestrant",
+        na=False,
+    ) & ~already_classified
+    immunotherapy = name_series.str.contains(
+        "pembrolizumab|nivolumab|atezolizumab|durvalumab|ipilimumab|tremelimumab",
+        na=False,
+    ) & ~already_classified
+    targeted = name_series.str.contains(
+        "bevacizumab|brentuximab|everolimus|alectinib|afatinib|zanubrutinib|"
+        "cabozantinib|gefitinib|ruxolitinib|palbociclib|ibrutinib|ribociclib|"
+        "lorlatinib|olaparib|erlotinib|sorafenib|entrectinib|lenalidomide|"
+        "tepotinib|abemaciclib|dacomitinib|lapatinib|ramucirumab|cetuximab|"
+        "trastuzumab|rituximab|pertuzumab|bortezomib",
+        na=False,
+    ) & ~hormone & ~immunotherapy & ~already_classified
+    chemotherapy = (
+        name_series.str.contains(
+            "fluorouracil|pemetrexed|doxorubicin|vinblastine|etoposide|"
+            "lurbinectedin|cyclophosphamide|methotrexate|chlorambucil|"
+            "vinorelbine|capecitabine|azacitidine|bleomycin|carboplatin|"
+            "oxaliplatin|dacarbazine|epirubicin|gemcitabine|ifosfamide|"
+            "irinotecan|cisplatin|topotecan|vincristine|paclitaxel|docetaxel",
+            na=False,
+        )
+        | code_series.str.startswith(("I5FU", "IALI", "IADR", "IVIN", "IVEP", "OMET", "OXEL"))
+    ) & ~hormone & ~immunotherapy & ~targeted & ~already_classified
+
+    categories["hormone_therapy"] = categories["hormone_therapy"] | hormone
+    categories["immunotherapy"] = categories["immunotherapy"] | immunotherapy
+    categories["targeted_therapy"] = categories["targeted_therapy"] | targeted
+    categories["chemotherapy"] = categories["chemotherapy"] | chemotherapy
+
+    return {
+        "chemotherapy": categories["chemotherapy"].map({True: "Y", False: ""}),
+        "targeted_therapy": categories["targeted_therapy"].map({True: "Y", False: ""}),
+        "immunotherapy": categories["immunotherapy"].map({True: "Y", False: ""}),
+        "hormone_therapy": categories["hormone_therapy"].map({True: "Y", False: ""}),
+    }
 
 
 def _normalize_tnm_series(values: pd.Series) -> pd.Series:
@@ -1207,7 +1702,52 @@ def _enrich_from_patient_lookup(
     if "case_id" not in enriched.columns or not lookup:
         return enriched
 
-    keys = enriched["case_id"].fillna("").astype(str).str.strip()
+    mrn_index: dict[str, str] = {}
+    name_birth_index: dict[str, str] = {}
+    unique_name_index: dict[str, str | None] = {}
+    for case_id, payload in lookup.items():
+        mrn = str(payload.get("medical_record_no", "")).strip()
+        name = str(payload.get("patient_name", "")).strip()
+        birth = str(payload.get("birth_date", "")).strip()
+        if mrn:
+            mrn_index.setdefault(mrn, case_id)
+        if name and birth:
+            name_birth_index.setdefault(f"{name}|{birth}", case_id)
+        if name:
+            if name in unique_name_index and unique_name_index[name] != case_id:
+                unique_name_index[name] = None
+            else:
+                unique_name_index.setdefault(name, case_id)
+
+    resolved_keys: list[str] = []
+    current_case_ids = enriched["case_id"].fillna("").astype(str).str.strip()
+    current_mrns = enriched.get("medical_record_no", pd.Series("", index=enriched.index)).fillna("").astype(str).str.strip()
+    current_names = enriched.get("patient_name", pd.Series("", index=enriched.index)).fillna("").astype(str).str.strip()
+    current_births = enriched.get("birth_date", pd.Series("", index=enriched.index)).fillna("").astype(str).str.strip()
+
+    for idx in enriched.index:
+        case_id = current_case_ids.loc[idx]
+        if case_id and case_id in lookup:
+            resolved_keys.append(case_id)
+            continue
+        mrn = current_mrns.loc[idx]
+        if mrn and mrn in mrn_index:
+            resolved_keys.append(mrn_index[mrn])
+            continue
+        name = current_names.loc[idx]
+        birth = current_births.loc[idx]
+        if name and birth and f"{name}|{birth}" in name_birth_index:
+            resolved_keys.append(name_birth_index[f"{name}|{birth}"])
+            continue
+        if name and unique_name_index.get(name):
+            resolved_keys.append(str(unique_name_index[name]))
+            continue
+        resolved_keys.append("")
+
+    keys = pd.Series(resolved_keys, index=enriched.index, dtype="object")
+
+    existing_case_ids = enriched["case_id"].fillna("").astype(str).str.strip()
+    enriched["case_id"] = existing_case_ids.where(existing_case_ids != "", keys)
 
     for target_column in [
         "medical_record_no",
@@ -1296,7 +1836,15 @@ def _build_record_key_series(frame: pd.DataFrame) -> pd.Series:
     keys = []
     for idx in frame.index:
         report_name = _safe_cell(frame, idx, "report_name")
-        if "化療流程時間" in report_name:
+        if _safe_cell(frame, idx, "order_code"):
+            key_parts = [
+                report_name,
+                _safe_cell(frame, idx, "medical_record_no"),
+                _safe_cell(frame, idx, "order_code"),
+                _safe_cell(frame, idx, "report_date"),
+                _safe_cell(frame, idx, "location"),
+            ]
+        elif "化療流程時間" in report_name:
             key_parts = [report_name, _safe_cell(frame, idx, "order_id"), _safe_cell(frame, idx, "report_date")]
         elif "化療名單" in report_name:
             key_parts = [report_name, _safe_cell(frame, idx, "medical_record_no"), _safe_cell(frame, idx, "report_date"), _safe_cell(frame, idx, "treatment_status"), _safe_cell(frame, idx, "location")]
@@ -1330,8 +1878,10 @@ def _build_unmatched_icd10_report(frame: pd.DataFrame) -> pd.DataFrame:
         )
     working = frame.copy()
     working["icd10_code_norm"] = working.get("icd10_code", pd.Series("", index=working.index)).fillna("").astype(str).map(_normalize_icd10_code)
+    working["diagnosis_text"] = working.get("diagnosis_text", pd.Series("", index=working.index)).fillna("").astype(str).str.strip()
     unmatched = working[
         (working["icd10_code_norm"] != "")
+        & (working["icd10_code_norm"].str.startswith("C"))
         & (working.get("cancer_type", pd.Series("", index=working.index)).fillna("").astype(str).str.strip() == "")
     ]
     if unmatched.empty:
@@ -1341,6 +1891,7 @@ def _build_unmatched_icd10_report(frame: pd.DataFrame) -> pd.DataFrame:
     summary = (
         unmatched.groupby("icd10_code_norm", dropna=False)
         .agg(
+            diagnosis_text=("diagnosis_text", lambda values: next((str(value).strip() for value in values if str(value).strip()), "")),
             count=("icd10_code_norm", "size"),
             report_names=("report_name", lambda values: " | ".join(sorted(set(v for v in values if str(v).strip())))),
         )
@@ -1350,7 +1901,6 @@ def _build_unmatched_icd10_report(frame: pd.DataFrame) -> pd.DataFrame:
         .reset_index(drop=True)
     )
     summary.insert(1, "cancer_type", "")
-    summary.insert(2, "diagnosis_text", "")
     summary["notes"] = ""
     return summary
 
@@ -1375,14 +1925,130 @@ def _build_stage_review_report(frame: pd.DataFrame) -> pd.DataFrame:
     return summary
 
 
+def _build_unmapped_drug_orders_report(frame: pd.DataFrame) -> pd.DataFrame:
+    columns = [
+        "order_code",
+        "order_name",
+        "count",
+        "report_names",
+        "sample_diagnosis_texts",
+        "treatment_type",
+        "name_pattern",
+        "order_code_prefix",
+        "notes",
+    ]
+    if frame.empty:
+        return pd.DataFrame(columns=columns)
+    unmapped = _unmapped_order_rows(frame)
+    if unmapped.empty:
+        return pd.DataFrame(columns=columns)
+    drug_rows = unmapped[
+        unmapped.get("report_name", pd.Series("", index=unmapped.index)).fillna("").astype(str).str.contains("指引藥物", na=False)
+    ].copy()
+    if drug_rows.empty:
+        return pd.DataFrame(columns=columns)
+    return _summarize_unmapped_orders(drug_rows, include_cancer_columns=False)
+
+
+def _build_unmapped_treatment_orders_report(frame: pd.DataFrame) -> pd.DataFrame:
+    columns = [
+        "order_code",
+        "order_name",
+        "count",
+        "report_names",
+        "sample_diagnosis_texts",
+        "treatment_type",
+        "name_pattern",
+        "order_code_prefix",
+        "cancer_type",
+        "diagnosis_text",
+        "notes",
+    ]
+    if frame.empty:
+        return pd.DataFrame(columns=columns)
+    unmapped = _unmapped_order_rows(frame)
+    if unmapped.empty:
+        return pd.DataFrame(columns=columns)
+    treatment_rows = unmapped[
+        ~unmapped.get("report_name", pd.Series("", index=unmapped.index)).fillna("").astype(str).str.contains("指引藥物", na=False)
+    ].copy()
+    if treatment_rows.empty:
+        return pd.DataFrame(columns=columns)
+    return _summarize_unmapped_orders(treatment_rows, include_cancer_columns=True)
+
+
+def _unmapped_order_rows(frame: pd.DataFrame) -> pd.DataFrame:
+    if "order_code" not in frame.columns and "order_name" not in frame.columns:
+        return pd.DataFrame()
+    working = frame.copy()
+    order_code = working.get("order_code", pd.Series("", index=working.index)).fillna("").astype(str).str.strip()
+    order_name = working.get("order_name", pd.Series("", index=working.index)).fillna("").astype(str).str.strip()
+    has_order = (order_code != "") | (order_name != "")
+    treatment_columns = [
+        "chemotherapy",
+        "targeted_therapy",
+        "immunotherapy",
+        "hormone_therapy",
+        "radiation_therapy",
+        "surgery",
+        "tace",
+        "rfa",
+    ]
+    has_treatment = pd.Series(False, index=working.index, dtype="bool")
+    for column in treatment_columns:
+        if column not in working.columns:
+            continue
+        has_treatment = has_treatment | (
+            working[column].fillna("").astype(str).str.strip() == "Y"
+        )
+    return working.loc[has_order & ~has_treatment].copy()
+
+
+def _summarize_unmapped_orders(
+    frame: pd.DataFrame, *, include_cancer_columns: bool
+) -> pd.DataFrame:
+    working = frame.copy()
+    working["order_code_norm"] = working.get("order_code", pd.Series("", index=working.index)).fillna("").astype(str).str.strip()
+    working["order_name_norm"] = working.get("order_name", pd.Series("", index=working.index)).fillna("").astype(str).str.strip()
+    summary = (
+        working.groupby(["order_code_norm", "order_name_norm"], dropna=False)
+        .agg(
+            count=("order_code_norm", "size"),
+            report_names=("report_name", lambda values: " | ".join(sorted(set(v for v in values if str(v).strip())))),
+            sample_diagnosis_texts=("diagnosis_text", lambda values: " | ".join(list(dict.fromkeys(str(v).strip() for v in values if str(v).strip()))[:5])),
+        )
+        .reset_index()
+        .rename(columns={"order_code_norm": "order_code", "order_name_norm": "order_name"})
+        .sort_values(by=["count", "order_code", "order_name"], ascending=[False, True, True])
+        .reset_index(drop=True)
+    )
+    summary["treatment_type"] = ""
+    summary["name_pattern"] = ""
+    summary["order_code_prefix"] = ""
+    if include_cancer_columns:
+        summary["cancer_type"] = ""
+        summary["diagnosis_text"] = ""
+    summary["notes"] = ""
+    ordered = [
+        "order_code",
+        "order_name",
+        "count",
+        "report_names",
+        "sample_diagnosis_texts",
+        "treatment_type",
+        "name_pattern",
+        "order_code_prefix",
+    ]
+    if include_cancer_columns:
+        ordered.extend(["cancer_type", "diagnosis_text"])
+    ordered.append("notes")
+    return summary[ordered]
+
+
 def _add_record_keys(frame: pd.DataFrame) -> pd.DataFrame:
     enriched = frame.copy()
     patient_key = _build_patient_key_series(enriched)
-    # 如果patient_key列已存在，则替换；否则插入
-    if "patient_key" in enriched.columns:
-        enriched["patient_key"] = patient_key
-    else:
-        enriched.insert(0, "patient_key", patient_key)
+    enriched.insert(0, "patient_key", patient_key)
     return enriched
 
 
@@ -1605,9 +2271,14 @@ def _build_patient_key_for_row(frame: pd.DataFrame, idx: object) -> str:
     mrn = _safe_cell(frame, idx, "medical_record_no")
     patient_name = _safe_cell(frame, idx, "patient_name")
     birth_date = _safe_cell(frame, idx, "birth_date")
+    order_code = _safe_cell(frame, idx, "order_code")
 
     # Cancer case reports use 個案編號 as the most stable patient-level key.
     if any(tag in report_name for tag in ("D1.1", "D1.2", "D1.4")) and case_id:
+        return f"CASE:{case_id}"
+
+    # Order-detail rows may have case_id backfilled from the cancer-case lookup.
+    if order_code and case_id:
         return f"CASE:{case_id}"
 
     # Event-style reports often use case_id for encounter/order numbers, so prefer MRN.
@@ -1674,6 +2345,8 @@ def _merge_patient_group(patient_key: str, group: pd.DataFrame) -> dict[str, str
             "hormone_therapy",
             "radiation_therapy",
             "surgery",
+            "tace",
+            "rfa",
         }:
             merged[column] = "Y" if (non_blank == "Y").any() else ""
         else:
