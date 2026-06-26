@@ -4,6 +4,7 @@ from report_cleaner.config import CSV_ENCODING, ProjectPaths
 from report_cleaner.mapping_review import (
     PENDING_DRUG_MAPPING_FILE,
     PENDING_ORDER_MAPPING_FILE,
+    PENDING_STAGE_MAPPING_FILE,
     apply_mapping_review_files,
 )
 
@@ -72,15 +73,43 @@ def test_apply_mapping_review_files_appends_only_confirmed_rows(tmp_path) -> Non
             }
         ]
     ).to_csv(output_dir / PENDING_ORDER_MAPPING_FILE, index=False, encoding=CSV_ENCODING)
+    pd.DataFrame(
+        [
+            {
+                "cancer_type": "CR_結腸直腸癌",
+                "tnm_pattern": "cT3N1M0",
+                "final_stage": "3",
+                "notes": "confirmed",
+                "clinical_tnm": "cT3N1M0",
+                "pathologic_tnm": "",
+                "review_reason": "missing_final_stage",
+                "count": "2",
+            },
+            {
+                "cancer_type": "LC_肺癌",
+                "tnm_pattern": "cT2NxMx",
+                "final_stage": "",
+                "notes": "needs review",
+                "clinical_tnm": "cT2NxMx",
+                "pathologic_tnm": "",
+                "review_reason": "missing_final_stage_with_unknown_tnm",
+                "count": "2",
+            },
+        ]
+    ).to_csv(output_dir / PENDING_STAGE_MAPPING_FILE, index=False, encoding=CSV_ENCODING)
 
     result = apply_mapping_review_files(paths)
     result_again = apply_mapping_review_files(paths)
 
-    assert result == {"drug_rows_added": 1, "order_rows_added": 1}
-    assert result_again == {"drug_rows_added": 0, "order_rows_added": 0}
+    assert result == {"drug_rows_added": 1, "order_rows_added": 1, "stage_rows_added": 1}
+    assert result_again == {"drug_rows_added": 0, "order_rows_added": 0, "stage_rows_added": 0}
     drug_mapping = pd.read_csv(paths.drug_treatment_mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
     order_mapping = pd.read_csv(paths.order_treatment_mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
+    stage_mapping = pd.read_csv(paths.tnm_stage_mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
     assert drug_mapping["treatment_type"].tolist() == ["targeted_therapy"]
     assert order_mapping["order_code"].tolist() == ["99999X"]
+    assert stage_mapping["tnm_pattern"].tolist() == ["cT3N1M0"]
+    assert stage_mapping["final_stage"].tolist() == ["3"]
     assert paths.drug_treatment_mapping_file.read_bytes().startswith(b"\xef\xbb\xbf")
     assert paths.order_treatment_mapping_file.read_bytes().startswith(b"\xef\xbb\xbf")
+    assert paths.tnm_stage_mapping_file.read_bytes().startswith(b"\xef\xbb\xbf")

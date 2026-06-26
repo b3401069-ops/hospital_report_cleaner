@@ -41,7 +41,7 @@ python -m report_cleaner.cli
 
 ## 半自動補 Mapping
 
-新增 raw 報表後，若 `unmapped_drug_orders` 或 `unmapped_treatment_orders` 有資料，可先匯出待填 CSV：
+新增 raw 報表後，若 `unmapped_drug_orders`、`unmapped_treatment_orders` 或 `stage_review` 有需要人工確認的資料，可先匯出待填 CSV：
 
 ```powershell
 $env:PYTHONPATH="src"
@@ -52,15 +52,16 @@ python -m report_cleaner.cli export-mapping-review
 
 - `output/pending_drug_treatment_mapping.csv`
 - `output/pending_order_treatment_mapping.csv`
+- `output/pending_tnm_stage_mapping.csv`
 
-人工填好 `treatment_type`，必要時調整 `name_pattern`、`order_code`、`order_code_prefix`、`cancer_type`、`diagnosis_text` 後，再套用回 mapping：
+人工填好藥物/治療醫令的 `treatment_type`，必要時調整 `name_pattern`、`order_code`、`order_code_prefix`、`cancer_type`、`diagnosis_text`。TNM stage review 則只套用已填 `final_stage` 的列。確認後再套用回 mapping：
 
 ```powershell
 $env:PYTHONPATH="src"
 python -m report_cleaner.cli apply-mapping-review
 ```
 
-只有已填 `treatment_type` 且有比對規則的列會被追加到 mapping CSV；空白列不會套用。
+只有已填 `treatment_type` 且有比對規則的藥物/治療列會被追加到 mapping CSV；TNM stage 只有已填 `cancer_type`、`tnm_pattern`、`final_stage` 的列會被追加到 `mapping/tnm_stage_mapping.csv`。空白列不會套用。
 
 ## 目前支援
 

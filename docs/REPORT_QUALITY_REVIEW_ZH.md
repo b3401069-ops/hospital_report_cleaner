@@ -55,7 +55,7 @@
    每次新增 raw 報表後，先看 `unmapped_drug_orders` 和 `unmapped_treatment_orders` 是否有資料；若有，人工確認分類後再補 mapping CSV。
 
 8. 使用半自動 mapping 工具。
-   可用 `python -m report_cleaner.cli export-mapping-review` 產生 `output/pending_drug_treatment_mapping.csv` 與 `output/pending_order_treatment_mapping.csv`，人工填好 `treatment_type` 後，再用 `python -m report_cleaner.cli apply-mapping-review` 追加到正式 mapping CSV。
+   可用 `python -m report_cleaner.cli export-mapping-review` 產生 `output/pending_drug_treatment_mapping.csv`、`output/pending_order_treatment_mapping.csv` 與 `output/pending_tnm_stage_mapping.csv`。藥物/醫令列人工填好 `treatment_type`，TNM stage 列人工填好 `final_stage` 後，再用 `python -m report_cleaner.cli apply-mapping-review` 追加到正式 mapping CSV。
 
 ## 2026-06-26 品質檢查補充
 
@@ -64,3 +64,4 @@
 - `unmatched_icd10.notes` 會用 `secondary_or_metastatic_code_needs_primary_site_review` 標示這類需確認原發部位的 code。
 - `stage_review` 新增 `primary_tnm` 與 `review_reason`，方便優先處理缺少 final stage 或 TNM 含 `X` 的資料。
 - 程式不會自行硬算 TNM stage；只有 `mapping/tnm_stage_mapping.csv` 有人工確認過的對照時，才會補上 `final_stage_source = tnm_mapping`。
+- `output/pending_tnm_stage_mapping.csv` 只會列出缺少 final stage 且有 TNM pattern 的組合；人工確認後填入 `final_stage`，再用 `apply-mapping-review` 追加到 `mapping/tnm_stage_mapping.csv`。
