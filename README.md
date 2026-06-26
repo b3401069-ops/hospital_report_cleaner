@@ -9,13 +9,15 @@
 - 清除空白列、合計列、重複資料
 - 標準化日期與文字值
 - 輸出到 `output/cleaned_reports.xlsx`
-- 同時產生 `cleaned_data`、`standardized_data`、`patient_master`、`unmatched_icd10`、`stage_review` 五張工作表
+- 同時產生 `cleaned_data`、`standardized_data`、`patient_master`、`patient_list`、`patient_list_zh`、`summary_zh`、`summary_trend_zh`、`unmatched_icd10`、`stage_review` 等工作表
 
 ## 建議流程
 
 1. 把原始報表放進 `raw/`
 2. 依需求調整 `mapping/column_mapping.csv`
 3. 依需求調整 `mapping/value_mapping.csv`
+4. 依需求調整 `mapping/drug_treatment_mapping.csv`
+5. 依需求調整 `mapping/order_treatment_mapping.csv`
 4. 安裝套件後執行清洗
 
 ## 安裝
@@ -24,12 +26,41 @@
 pip install -r requirements.txt
 ```
 
+## 測試
+
+```powershell
+python -m pytest
+```
+
 ## 執行
 
 ```powershell
 $env:PYTHONPATH="src"
 python -m report_cleaner.cli
 ```
+
+## 半自動補 Mapping
+
+新增 raw 報表後，若 `unmapped_drug_orders` 或 `unmapped_treatment_orders` 有資料，可先匯出待填 CSV：
+
+```powershell
+$env:PYTHONPATH="src"
+python -m report_cleaner.cli export-mapping-review
+```
+
+會產生：
+
+- `output/pending_drug_treatment_mapping.csv`
+- `output/pending_order_treatment_mapping.csv`
+
+人工填好 `treatment_type`，必要時調整 `name_pattern`、`order_code`、`order_code_prefix`、`cancer_type`、`diagnosis_text` 後，再套用回 mapping：
+
+```powershell
+$env:PYTHONPATH="src"
+python -m report_cleaner.cli apply-mapping-review
+```
+
+只有已填 `treatment_type` 且有比對規則的列會被追加到 mapping CSV；空白列不會套用。
 
 ## 目前支援
 
@@ -42,15 +73,32 @@ python -m report_cleaner.cli
 - `cleaned_data`：保留原始欄位的大聯集清洗版
 - `standardized_data`：把不同報表轉成統一欄位，保留每筆事件
 - `patient_master`：同一病人跨報表合併後的主檔
+- `patient_list`：適合後續篩選或串接的病人清單
+- `patient_list_zh`：中文欄名版本的病人清單
+- `summary_zh`：依癌別、期別、個案分類、性別、年齡區間、治療別統計人數
+- `summary_trend_zh`：依診斷月份彙整總人數、癌別與治療別趨勢
 - `unmatched_icd10`：目前還無法自動映射癌別的 ICD10 清單
 - `stage_review`：目前 TNM 與 final stage 的整理結果
+- `unmapped_drug_orders`：尚未歸類的指引藥物醫令，可用來補 `mapping/drug_treatment_mapping.csv`
+- `unmapped_treatment_orders`：尚未歸類的一般治療醫令，可用來補 `mapping/order_treatment_mapping.csv`
 - 會盡量從檔名或報表表頭抓出 `report_period_start` / `report_period_end`
+
+## 資料安全
+
+- `raw/` 與 `output/` 預設被 `.gitignore` 排除，避免原始報表與清洗後病人資料進入 GitHub
+- 若要分享測試資料，請放匿名化、小型範例到 `tests/fixtures/`
+- `mapping/` 可以進版控，因為它保存欄位、值、ICD10、TNM 與藥物治療分類規則
 
 ## Final Stage 策略
 
 - 先用報表原始 `期別` 當 `final_stage`
 - 若 `final_stage` 空白，才會嘗試查 `mapping/tnm_stage_mapping.csv`
 - `mapping/tnm_stage_mapping.csv` 可逐步補上院內常見的 `癌別 + TNM -> stage` 對照
+
+## 品質檢查
+
+- 最新不含病人明細的檢查紀錄放在 `docs/REPORT_QUALITY_REVIEW_ZH.md`
+- 優先處理 `unmatched_icd10`、`stage_review`、`unmapped_drug_orders`、`unmapped_treatment_orders`、病人主檔欄位空值率與 summary sheet 是否符合使用情境
 
 ## 備註
 
@@ -61,6 +109,9 @@ python -m report_cleaner.cli
 
 - `raw/`：原始報表
 - `mapping/`：欄位與值對照表
+- `mapping/drug_treatment_mapping.csv`：指引藥物的化療、標靶、免疫、荷爾蒙分類規則
+- `mapping/order_treatment_mapping.csv`：醫令型報表的化療、放療、手術、TACE、RFA 分類規則
+- `output/pending_*_mapping.csv`：半自動 mapping review 暫存檔，不進版控
 - `output/`：輸出結果
 - `src/report_cleaner/`：清洗程式
 

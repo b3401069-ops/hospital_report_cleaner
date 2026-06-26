@@ -1,7 +1,0 @@
-column,source_value,target_value
-department,內科,Internal Medicine
-department,外科,Surgery
-department,骨科,Orthopedics
-department,婦產科,Obstetrics and Gynecology
-report_type,門診,Outpatient
-report_type,住院,Inpatient

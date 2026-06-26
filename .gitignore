@@ -1,9 +1,21 @@
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
 .venv/
-output/*.xlsx
-output/*.csv
-raw/*.xlsx
-raw/*.xls
-raw/*.csv
+
+# Keep real patient reports and generated workbooks out of git.
+raw/*
+output/*
+!raw/.gitkeep
+!output/.gitkeep
+*.xls
+*.xlsx
+*.xlsm
+*.zip
+
+.claude/
+.agents/
+_compare/
+dist_package/
+desktop.ini
+~$*
