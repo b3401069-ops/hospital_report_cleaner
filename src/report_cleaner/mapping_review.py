@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from .cleaner import run_cleaning
-from .config import ProjectPaths
+from .config import CSV_ENCODING, ProjectPaths
 
 PENDING_DRUG_MAPPING_FILE = "pending_drug_treatment_mapping.csv"
 PENDING_ORDER_MAPPING_FILE = "pending_order_treatment_mapping.csv"
@@ -71,10 +71,10 @@ def export_mapping_review_files(paths: ProjectPaths) -> tuple[Path, Path]:
     order_file = paths.output_dir / PENDING_ORDER_MAPPING_FILE
 
     _build_pending_drug_mapping(unmapped_drug_orders_frame).to_csv(
-        drug_file, index=False, encoding="utf-8-sig"
+        drug_file, index=False, encoding=CSV_ENCODING
     )
     _build_pending_order_mapping(unmapped_treatment_orders_frame).to_csv(
-        order_file, index=False, encoding="utf-8-sig"
+        order_file, index=False, encoding=CSV_ENCODING
     )
     return drug_file, order_file
 
@@ -121,7 +121,7 @@ def _append_confirmed_mapping_rows(
     if not pending_file.exists():
         return 0
 
-    pending = pd.read_csv(pending_file, dtype=str).fillna("")
+    pending = pd.read_csv(pending_file, dtype=str, encoding=CSV_ENCODING).fillna("")
     pending = _ensure_columns(pending, mapping_columns)
     pending = pending[mapping_columns].copy()
     pending = pending.apply(lambda column: column.map(lambda value: str(value).strip()))
@@ -143,7 +143,7 @@ def _append_confirmed_mapping_rows(
         return 0
 
     if mapping_file.exists():
-        existing = pd.read_csv(mapping_file, dtype=str).fillna("")
+        existing = pd.read_csv(mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
         existing = _ensure_columns(existing, mapping_columns)
         existing = existing[mapping_columns].copy()
     else:
@@ -155,7 +155,7 @@ def _append_confirmed_mapping_rows(
     after = len(combined)
 
     mapping_file.parent.mkdir(parents=True, exist_ok=True)
-    combined.to_csv(mapping_file, index=False, encoding="utf-8-sig")
+    combined.to_csv(mapping_file, index=False, encoding=CSV_ENCODING)
     return after - before
 
 

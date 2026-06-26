@@ -88,6 +88,7 @@ python -m report_cleaner.cli apply-mapping-review
 - `raw/` 與 `output/` 預設被 `.gitignore` 排除，避免原始報表與清洗後病人資料進入 GitHub
 - 若要分享測試資料，請放匿名化、小型範例到 `tests/fixtures/`
 - `mapping/` 可以進版控，因為它保存欄位、值、ICD10、TNM 與藥物治療分類規則
+- `mapping/*.csv` 使用 UTF-8 with BOM，方便 Windows 檔案總管與 Excel 直接開啟時正確顯示繁體中文
 
 ## Final Stage 策略
 

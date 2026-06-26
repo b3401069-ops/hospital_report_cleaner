@@ -1,4 +1,4 @@
-treatment_type,name_pattern,order_code,order_code_prefix,notes
+﻿treatment_type,name_pattern,order_code,order_code_prefix,notes
 chemotherapy,fluorouracil,,,antimetabolite chemotherapy
 chemotherapy,pemetrexed,,,antimetabolite chemotherapy
 chemotherapy,doxorubicin,,,anthracycline chemotherapy

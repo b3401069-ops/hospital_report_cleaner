@@ -5,7 +5,7 @@ import re
 
 import pandas as pd
 
-from .config import ProjectPaths
+from .config import CSV_ENCODING, ProjectPaths
 
 SUPPORTED_SUFFIXES = {".xlsx", ".xls", ".csv"}
 SENSITIVE_COLUMN_PATTERNS = (
@@ -377,7 +377,7 @@ def _collect_source_files(raw_dir: Path) -> list[Path]:
 def _read_report(file_path: Path) -> tuple[pd.DataFrame, str, str]:
     suffix = file_path.suffix.lower()
     if suffix == ".csv":
-        frame = pd.read_csv(file_path, dtype=str, encoding="utf-8-sig")
+        frame = pd.read_csv(file_path, dtype=str, encoding=CSV_ENCODING)
         period_start, period_end = _extract_period_from_filename(file_path.name)
         return frame, period_start, period_end
     preview = pd.read_excel(file_path, header=None, dtype=str, nrows=8)
@@ -498,7 +498,7 @@ def _normalize_period_token(token: str, *, is_end: bool) -> str:
 def _load_column_mapping(mapping_file: Path) -> dict[str, str]:
     if not mapping_file.exists():
         return {}
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
     return {
         row["source_column"].strip(): row["target_column"].strip()
         for _, row in mapping_frame.iterrows()
@@ -509,7 +509,7 @@ def _load_column_mapping(mapping_file: Path) -> dict[str, str]:
 def _load_value_mapping(mapping_file: Path) -> dict[str, dict[str, str]]:
     if not mapping_file.exists():
         return {}
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
     mappings: dict[str, dict[str, str]] = {}
     for _, row in mapping_frame.iterrows():
         column = row["column"].strip()
@@ -524,7 +524,7 @@ def _load_value_mapping(mapping_file: Path) -> dict[str, dict[str, str]]:
 def _load_tnm_stage_mapping(mapping_file: Path) -> dict[tuple[str, str], str]:
     if not mapping_file.exists():
         return {}
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
     mapping: dict[tuple[str, str], str] = {}
     for _, row in mapping_frame.iterrows():
         cancer_type = row.get("cancer_type", "").strip()
@@ -538,7 +538,7 @@ def _load_tnm_stage_mapping(mapping_file: Path) -> dict[tuple[str, str], str]:
 def _load_manual_icd10_mapping(mapping_file: Path) -> dict[str, tuple[str, str]]:
     if not mapping_file.exists():
         return {}
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
     mapping: dict[str, tuple[str, str]] = {}
     for _, row in mapping_frame.iterrows():
         icd10_code = _normalize_icd10_code(row.get("icd10_code", ""))
@@ -553,7 +553,7 @@ def _load_manual_icd10_mapping(mapping_file: Path) -> dict[str, tuple[str, str]]
 def _load_drug_treatment_mapping(mapping_file: Path) -> list[dict[str, str]]:
     if not mapping_file.exists():
         return []
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
     mappings: list[dict[str, str]] = []
     for _, row in mapping_frame.iterrows():
         treatment_type = row.get("treatment_type", "").strip()
@@ -578,7 +578,7 @@ def _load_drug_treatment_mapping(mapping_file: Path) -> list[dict[str, str]]:
 def _load_order_treatment_mapping(mapping_file: Path) -> list[dict[str, str]]:
     if not mapping_file.exists():
         return []
-    mapping_frame = pd.read_csv(mapping_file, dtype=str).fillna("")
+    mapping_frame = pd.read_csv(mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
     mappings: list[dict[str, str]] = []
     for _, row in mapping_frame.iterrows():
         treatment_type = row.get("treatment_type", "").strip()
@@ -1872,10 +1872,9 @@ def _safe_cell(frame: pd.DataFrame, idx: object, column: str) -> str:
 
 
 def _build_unmatched_icd10_report(frame: pd.DataFrame) -> pd.DataFrame:
+    columns = ["icd10_code", "cancer_type", "diagnosis_text", "count", "report_names", "notes"]
     if frame.empty:
-        return pd.DataFrame(
-            columns=["icd10_code", "cancer_type", "diagnosis_text", "count", "report_names", "notes"]
-        )
+        return pd.DataFrame(columns=columns)
     working = frame.copy()
     working["icd10_code_norm"] = working.get("icd10_code", pd.Series("", index=working.index)).fillna("").astype(str).map(_normalize_icd10_code)
     working["diagnosis_text"] = working.get("diagnosis_text", pd.Series("", index=working.index)).fillna("").astype(str).str.strip()
@@ -1885,9 +1884,7 @@ def _build_unmatched_icd10_report(frame: pd.DataFrame) -> pd.DataFrame:
         & (working.get("cancer_type", pd.Series("", index=working.index)).fillna("").astype(str).str.strip() == "")
     ]
     if unmatched.empty:
-        return pd.DataFrame(
-            columns=["icd10_code", "cancer_type", "diagnosis_text", "count", "report_names", "notes"]
-        )
+        return pd.DataFrame(columns=columns)
     summary = (
         unmatched.groupby("icd10_code_norm", dropna=False)
         .agg(
@@ -1901,28 +1898,75 @@ def _build_unmatched_icd10_report(frame: pd.DataFrame) -> pd.DataFrame:
         .reset_index(drop=True)
     )
     summary.insert(1, "cancer_type", "")
-    summary["notes"] = ""
-    return summary
+    summary["notes"] = summary["icd10_code"].map(_icd10_review_note)
+    return summary[columns]
+
+
+def _icd10_review_note(icd10_code: str) -> str:
+    normalized = _normalize_icd10_code(icd10_code)
+    if normalized.startswith(("C77", "C78", "C79")):
+        return "secondary_or_metastatic_code_needs_primary_site_review"
+    return ""
 
 
 def _build_stage_review_report(frame: pd.DataFrame) -> pd.DataFrame:
+    columns = [
+        "cancer_type",
+        "clinical_tnm",
+        "pathologic_tnm",
+        "primary_tnm",
+        "final_stage",
+        "final_stage_source",
+        "review_reason",
+        "count",
+    ]
     if frame.empty:
-        return pd.DataFrame(columns=["cancer_type", "clinical_tnm", "pathologic_tnm", "final_stage", "final_stage_source", "count"])
+        return pd.DataFrame(columns=columns)
     working = frame.copy()
     clinical = working.get("clinical_tnm", pd.Series("", index=working.index)).fillna("").astype(str).str.strip()
     pathologic = working.get("pathologic_tnm", pd.Series("", index=working.index)).fillna("").astype(str).str.strip()
     has_tnm = (clinical != "") | (pathologic != "")
     review = working.loc[has_tnm, ["cancer_type", "clinical_tnm", "pathologic_tnm", "final_stage", "final_stage_source"]].copy()
     if review.empty:
-        return pd.DataFrame(columns=["cancer_type", "clinical_tnm", "pathologic_tnm", "final_stage", "final_stage_source", "count"])
+        return pd.DataFrame(columns=columns)
+    review["primary_tnm"] = _primary_tnm_series(review)
+    review["review_reason"] = review.apply(_stage_review_reason, axis=1)
     summary = (
-        review.groupby(["cancer_type", "clinical_tnm", "pathologic_tnm", "final_stage", "final_stage_source"], dropna=False)
+        review.groupby(
+            [
+                "cancer_type",
+                "clinical_tnm",
+                "pathologic_tnm",
+                "primary_tnm",
+                "final_stage",
+                "final_stage_source",
+                "review_reason",
+            ],
+            dropna=False,
+        )
         .size()
         .reset_index(name="count")
-        .sort_values(by=["cancer_type", "clinical_tnm", "pathologic_tnm", "count"], ascending=[True, True, True, False])
+        .sort_values(by=["review_reason", "cancer_type", "clinical_tnm", "pathologic_tnm", "count"], ascending=[True, True, True, True, False])
         .reset_index(drop=True)
     )
-    return summary
+    return summary[columns]
+
+
+def _stage_review_reason(row: pd.Series) -> str:
+    final_stage = str(row.get("final_stage", "")).strip()
+    final_stage_source = str(row.get("final_stage_source", "")).strip()
+    primary_tnm = _normalize_tnm_text(str(row.get("primary_tnm", "")).strip())
+    primary_tnm_upper = primary_tnm.upper()
+
+    if final_stage:
+        if final_stage_source == "tnm_mapping":
+            return "mapped_from_tnm"
+        return "reported_stage"
+    if primary_tnm_upper in {"", "CTNM", "PTNM", "TNM"}:
+        return "missing_final_stage_with_non_specific_tnm"
+    if "X" in primary_tnm_upper:
+        return "missing_final_stage_with_unknown_tnm"
+    return "missing_final_stage"
 
 
 def _build_unmapped_drug_orders_report(frame: pd.DataFrame) -> pd.DataFrame:

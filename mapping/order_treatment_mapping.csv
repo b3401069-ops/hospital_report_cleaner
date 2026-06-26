@@ -1,4 +1,4 @@
-treatment_type,name_pattern,order_code,order_code_prefix,cancer_type,diagnosis_text,notes
+﻿treatment_type,name_pattern,order_code,order_code_prefix,cancer_type,diagnosis_text,notes
 chemotherapy,,37038B,,,chemotherapy infusion order
 chemotherapy,,37039B,,,chemotherapy infusion order
 chemotherapy,,37040B,,,chemotherapy infusion order
