@@ -80,9 +80,9 @@ def export_mapping_review_files(paths: ProjectPaths) -> tuple[Path, Path, Path]:
     ) = run_cleaning(paths)
 
     paths.output_dir.mkdir(parents=True, exist_ok=True)
-    drug_file = paths.output_dir / PENDING_DRUG_MAPPING_FILE
-    order_file = paths.output_dir / PENDING_ORDER_MAPPING_FILE
-    stage_file = paths.output_dir / PENDING_STAGE_MAPPING_FILE
+    drug_file = _resolve_writable_review_path(paths.output_dir / PENDING_DRUG_MAPPING_FILE)
+    order_file = _resolve_writable_review_path(paths.output_dir / PENDING_ORDER_MAPPING_FILE)
+    stage_file = _resolve_writable_review_path(paths.output_dir / PENDING_STAGE_MAPPING_FILE)
 
     _build_pending_drug_mapping(unmapped_drug_orders_frame).to_csv(
         drug_file, index=False, encoding=CSV_ENCODING
@@ -229,6 +229,25 @@ def _append_confirmed_stage_rows(*, pending_file: Path, mapping_file: Path) -> i
     mapping_file.parent.mkdir(parents=True, exist_ok=True)
     combined.to_csv(mapping_file, index=False, encoding=CSV_ENCODING)
     return after - before
+
+
+def _resolve_writable_review_path(output_file: Path) -> Path:
+    try:
+        with open(output_file, "ab"):
+            pass
+        return output_file
+    except PermissionError:
+        stem = output_file.stem
+        suffix = output_file.suffix
+        for index in range(1, 100):
+            candidate = output_file.with_name(f"{stem}_{index}{suffix}")
+            try:
+                with open(candidate, "ab"):
+                    pass
+                return candidate
+            except PermissionError:
+                continue
+    return output_file
 
 
 def _ensure_columns(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
