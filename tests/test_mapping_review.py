@@ -1,6 +1,6 @@
 import pandas as pd
 
-from report_cleaner.config import ProjectPaths
+from report_cleaner.config import CSV_ENCODING, ProjectPaths
 from report_cleaner.mapping_review import (
     PENDING_DRUG_MAPPING_FILE,
     PENDING_ORDER_MAPPING_FILE,
@@ -54,7 +54,7 @@ def test_apply_mapping_review_files_appends_only_confirmed_rows(tmp_path) -> Non
                 "sample_diagnosis_texts": "",
             },
         ]
-    ).to_csv(output_dir / PENDING_DRUG_MAPPING_FILE, index=False)
+    ).to_csv(output_dir / PENDING_DRUG_MAPPING_FILE, index=False, encoding=CSV_ENCODING)
     pd.DataFrame(
         [
             {
@@ -71,14 +71,16 @@ def test_apply_mapping_review_files_appends_only_confirmed_rows(tmp_path) -> Non
                 "sample_diagnosis_texts": "",
             }
         ]
-    ).to_csv(output_dir / PENDING_ORDER_MAPPING_FILE, index=False)
+    ).to_csv(output_dir / PENDING_ORDER_MAPPING_FILE, index=False, encoding=CSV_ENCODING)
 
     result = apply_mapping_review_files(paths)
     result_again = apply_mapping_review_files(paths)
 
     assert result == {"drug_rows_added": 1, "order_rows_added": 1}
     assert result_again == {"drug_rows_added": 0, "order_rows_added": 0}
-    drug_mapping = pd.read_csv(paths.drug_treatment_mapping_file, dtype=str).fillna("")
-    order_mapping = pd.read_csv(paths.order_treatment_mapping_file, dtype=str).fillna("")
+    drug_mapping = pd.read_csv(paths.drug_treatment_mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
+    order_mapping = pd.read_csv(paths.order_treatment_mapping_file, dtype=str, encoding=CSV_ENCODING).fillna("")
     assert drug_mapping["treatment_type"].tolist() == ["targeted_therapy"]
     assert order_mapping["order_code"].tolist() == ["99999X"]
+    assert paths.drug_treatment_mapping_file.read_bytes().startswith(b"\xef\xbb\xbf")
+    assert paths.order_treatment_mapping_file.read_bytes().startswith(b"\xef\xbb\xbf")
