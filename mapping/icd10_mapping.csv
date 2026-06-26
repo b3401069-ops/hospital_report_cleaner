@@ -1,9 +1,16 @@
 icd10_code,cancer_type,diagnosis_text,notes
-C71.9,,腦惡性腫瘤,confirmed clean diagnosis
-C00.1,,下唇外側惡性腫瘤,confirmed clean diagnosis
-C12,,梨狀窩惡性腫瘤,confirmed clean diagnosis
-C44.21,,耳與外耳道皮膚基底細胞癌,confirmed clean diagnosis
-C44.42,,頭皮與頸部皮膚鱗狀細胞癌,confirmed clean diagnosis
-C65.2,,左側腎盂惡性腫瘤,confirmed clean diagnosis
-C82.98,,多部位淋巴結濾泡性淋巴瘤,confirmed clean diagnosis
-C86.0,,鼻型結外NK/T細胞淋巴瘤,confirmed clean diagnosis
+C00.1,OC_口腔癌,下唇外側惡性腫瘤,manual primary-site mapping
+C05.1,OC_口腔癌,軟顎惡性腫瘤,manual primary-site mapping
+C12,OC_口腔癌(含口咽及下咽),梨狀窩惡性腫瘤,manual primary-site mapping
+C14.0,OC_口腔癌(含口咽及下咽),咽部惡性腫瘤,manual primary-site mapping
+C37,CA_其他,胸腺惡性腫瘤,manual primary-site mapping
+C43.51,SK_皮膚癌,肛門皮膚惡性黑色素瘤,manual primary-site mapping
+C44.21,SK_皮膚癌,耳與外耳道皮膚基底細胞癌,manual primary-site mapping
+C44.42,SK_皮膚癌,頭皮與頸部皮膚鱗狀細胞癌,manual primary-site mapping
+C48.0,CA_其他,後腹腔惡性腫瘤,manual primary-site mapping
+C65.2,CA_其他,左側腎盂惡性腫瘤,manual primary-site mapping
+C71.9,CA_其他,腦惡性腫瘤,manual primary-site mapping
+C72.0,CA_其他,脊髓惡性腫瘤,manual primary-site mapping
+C82.98,LP_淋巴癌,多部位淋巴結濾泡性淋巴瘤,manual primary-site mapping
+C84,LP_淋巴癌,皮膚T細胞淋巴瘤,manual primary-site mapping
+C86.0,LP_淋巴癌,鼻型結外NK/T細胞淋巴瘤,manual primary-site mapping

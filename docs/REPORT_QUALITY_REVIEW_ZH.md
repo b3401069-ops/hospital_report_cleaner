@@ -56,3 +56,11 @@
 
 8. 使用半自動 mapping 工具。
    可用 `python -m report_cleaner.cli export-mapping-review` 產生 `output/pending_drug_treatment_mapping.csv` 與 `output/pending_order_treatment_mapping.csv`，人工填好 `treatment_type` 後，再用 `python -m report_cleaner.cli apply-mapping-review` 追加到正式 mapping CSV。
+
+## 2026-06-26 品質檢查補充
+
+- `mapping/icd10_mapping.csv` 已將明確的非核心主診斷 C-code 補到既有癌別群組。
+- `C77`、`C78`、`C79` 這類續發性或轉移性 ICD10 code 不直接推回主癌別，仍保留在 `unmatched_icd10` 供人工確認。
+- `unmatched_icd10.notes` 會用 `secondary_or_metastatic_code_needs_primary_site_review` 標示這類需確認原發部位的 code。
+- `stage_review` 新增 `primary_tnm` 與 `review_reason`，方便優先處理缺少 final stage 或 TNM 含 `X` 的資料。
+- 程式不會自行硬算 TNM stage；只有 `mapping/tnm_stage_mapping.csv` 有人工確認過的對照時，才會補上 `final_stage_source = tnm_mapping`。

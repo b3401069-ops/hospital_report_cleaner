@@ -2,6 +2,7 @@ import pandas as pd
 
 from report_cleaner.cleaner import (
     _apply_manual_icd10_mapping,
+    _build_stage_review_report,
     _build_unmapped_drug_orders_report,
     _build_unmapped_treatment_orders_report,
     _build_unmatched_icd10_report,
@@ -123,6 +124,27 @@ def test_unmatched_icd10_report_ignores_non_cancer_codes() -> None:
     report = _build_unmatched_icd10_report(frame)
 
     assert report["icd10_code"].tolist() == ["C78.00"]
+    assert report["notes"].tolist() == ["secondary_or_metastatic_code_needs_primary_site_review"]
+
+
+def test_stage_review_report_adds_review_reason() -> None:
+    frame = pd.DataFrame(
+        {
+            "cancer_type": ["LC", "CR", "BR"],
+            "clinical_tnm": ["cT2NxMx", "cT3N1M0", ""],
+            "pathologic_tnm": ["", "", "pT1cN0M0"],
+            "final_stage": ["", "", "1"],
+            "final_stage_source": ["", "", "reported"],
+        }
+    )
+
+    report = _build_stage_review_report(frame)
+
+    reasons = set(report["review_reason"])
+    assert "missing_final_stage_with_unknown_tnm" in reasons
+    assert "missing_final_stage" in reasons
+    assert "reported_stage" in reasons
+    assert "primary_tnm" in report.columns
 
 
 def test_standardize_guideline_drug_classifies_drug_treatments() -> None:
