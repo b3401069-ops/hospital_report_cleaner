@@ -8,6 +8,7 @@ from report_cleaner.cleaner import (
     _build_unmatched_icd10_report,
     _classify_drug_treatment,
     _classify_order_treatment,
+    _load_drug_treatment_mapping,
     _load_order_treatment_mapping,
     _standardize_guideline_drug,
     _standardize_inpatient,
@@ -191,6 +192,64 @@ def test_drug_treatment_mapping_rules_can_classify_new_drug_names() -> None:
 
     assert flags["targeted_therapy"].iloc[0] == "Y"
     assert flags["chemotherapy"].iloc[0] == ""
+
+
+def test_common_oncology_drug_mapping_rules_cover_future_reports() -> None:
+    mapping = [
+        {
+            "treatment_type": "chemotherapy",
+            "name_pattern": "cytarabine",
+            "order_code": "",
+            "order_code_prefix": "",
+        },
+        {
+            "treatment_type": "targeted_therapy",
+            "name_pattern": "osimertinib",
+            "order_code": "",
+            "order_code_prefix": "",
+        },
+        {
+            "treatment_type": "immunotherapy",
+            "name_pattern": "avelumab",
+            "order_code": "",
+            "order_code_prefix": "",
+        },
+        {
+            "treatment_type": "hormone_therapy",
+            "name_pattern": "abiraterone",
+            "order_code": "",
+            "order_code_prefix": "",
+        },
+    ]
+    order_code = pd.Series(["A", "B", "C", "D"])
+    order_name = pd.Series(
+        [
+            "Cytarabine 100mg/vial",
+            "Osimertinib 80mg tablet",
+            "Avelumab 200mg vial",
+            "Abiraterone 250mg tablet",
+        ]
+    )
+
+    flags = _classify_drug_treatment(order_code, order_name, mapping)
+
+    assert flags["chemotherapy"].tolist() == ["Y", "", "", ""]
+    assert flags["targeted_therapy"].tolist() == ["", "Y", "", ""]
+    assert flags["immunotherapy"].tolist() == ["", "", "Y", ""]
+    assert flags["hormone_therapy"].tolist() == ["", "", "", "Y"]
+
+
+def test_hospital_common_oncology_order_codes_are_mapped() -> None:
+    mapping = _load_drug_treatment_mapping(build_paths().drug_treatment_mapping_file)
+    order_code = pd.Series(["ICAR", "GIAVA", "GIMFI", "IFAL"])
+    order_name = pd.Series(["", "", "", ""])
+
+    flags = _classify_drug_treatment(order_code, order_name, mapping)
+
+    assert flags["chemotherapy"].tolist() == ["Y", "", "", ""]
+    assert flags["targeted_therapy"].tolist() == ["", "Y", "", ""]
+    assert flags["immunotherapy"].tolist() == ["", "", "Y", ""]
+    assert flags["hormone_therapy"].tolist() == ["", "", "", "Y"]
 
 
 def test_standardize_treatment_plan_reads_case_list_treatment_columns() -> None:
