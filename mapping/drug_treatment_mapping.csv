@@ -24,6 +24,21 @@ chemotherapy,topotecan,,,topoisomerase inhibitor chemotherapy
 chemotherapy,vincristine,,,vinca alkaloid chemotherapy
 chemotherapy,paclitaxel,,,taxane chemotherapy
 chemotherapy,docetaxel,,,taxane chemotherapy
+chemotherapy,cytarabine,,,antimetabolite chemotherapy
+chemotherapy,fludarabine,,,purine analog chemotherapy
+chemotherapy,cladribine,,,purine analog chemotherapy
+chemotherapy,melphalan,,,alkylating chemotherapy
+chemotherapy,busulfan,,,alkylating chemotherapy
+chemotherapy,bendamustine,,,alkylating chemotherapy
+chemotherapy,hydroxyurea,,,antimetabolite chemotherapy
+chemotherapy,mercaptopurine,,,antimetabolite chemotherapy
+chemotherapy,thioguanine,,,antimetabolite chemotherapy
+chemotherapy,procarbazine,,,alkylating chemotherapy
+chemotherapy,mitomycin,,,antitumor antibiotic chemotherapy
+chemotherapy,mitoxantrone,,,topoisomerase inhibitor chemotherapy
+chemotherapy,temozolomide,,,alkylating chemotherapy
+chemotherapy,eribulin,,,microtubule inhibitor chemotherapy
+chemotherapy,trabectedin,,,alkylating chemotherapy
 chemotherapy,,I5FU2,,local order code
 chemotherapy,,IALI1,,local order code
 chemotherapy,,IALI2,,local order code
@@ -61,14 +76,55 @@ targeted_therapy,trastuzumab,,,HER2 targeted therapy
 targeted_therapy,rituximab,,,CD20 antibody targeted therapy
 targeted_therapy,pertuzumab,,,HER2 targeted therapy
 targeted_therapy,bortezomib,,,proteasome targeted therapy
+targeted_therapy,osimertinib,,,EGFR targeted therapy
+targeted_therapy,crizotinib,,,ALK/ROS1/MET targeted therapy
+targeted_therapy,ceritinib,,,ALK targeted therapy
+targeted_therapy,brigatinib,,,ALK targeted therapy
+targeted_therapy,sunitinib,,,TKI targeted therapy
+targeted_therapy,pazopanib,,,TKI targeted therapy
+targeted_therapy,axitinib,,,TKI targeted therapy
+targeted_therapy,lenvatinib,,,TKI targeted therapy
+targeted_therapy,regorafenib,,,TKI targeted therapy
+targeted_therapy,imatinib,,,BCR-ABL/KIT targeted therapy
+targeted_therapy,dasatinib,,,BCR-ABL targeted therapy
+targeted_therapy,nilotinib,,,BCR-ABL targeted therapy
+targeted_therapy,bosutinib,,,BCR-ABL targeted therapy
+targeted_therapy,ponatinib,,,BCR-ABL targeted therapy
+targeted_therapy,venetoclax,,,BCL-2 targeted therapy
+targeted_therapy,acalabrutinib,,,BTK targeted therapy
+targeted_therapy,gilteritinib,,,FLT3 targeted therapy
+targeted_therapy,midostaurin,,,FLT3/KIT targeted therapy
+targeted_therapy,panitumumab,,,EGFR antibody targeted therapy
+targeted_therapy,daratumumab,,,CD38 antibody targeted therapy
+targeted_therapy,obinutuzumab,,,CD20 antibody targeted therapy
+targeted_therapy,elotuzumab,,,SLAMF7 antibody targeted therapy
+targeted_therapy,polatuzumab,,,antibody-drug conjugate targeted therapy
+targeted_therapy,emtansine,,,antibody-drug conjugate targeted therapy
+targeted_therapy,deruxtecan,,,antibody-drug conjugate targeted therapy
+targeted_therapy,sacituzumab,,,antibody-drug conjugate targeted therapy
+targeted_therapy,gemtuzumab,,,antibody-drug conjugate targeted therapy
+targeted_therapy,inotuzumab,,,antibody-drug conjugate targeted therapy
 immunotherapy,pembrolizumab,,,immune checkpoint inhibitor
 immunotherapy,nivolumab,,,immune checkpoint inhibitor
 immunotherapy,atezolizumab,,,immune checkpoint inhibitor
 immunotherapy,durvalumab,,,immune checkpoint inhibitor
 immunotherapy,ipilimumab,,,immune checkpoint inhibitor
 immunotherapy,tremelimumab,,,immune checkpoint inhibitor
+immunotherapy,avelumab,,,immune checkpoint inhibitor
+immunotherapy,cemiplimab,,,immune checkpoint inhibitor
 hormone_therapy,letrozole,,,aromatase inhibitor
 hormone_therapy,anastrozole,,,aromatase inhibitor
 hormone_therapy,exemestane,,,aromatase inhibitor
 hormone_therapy,tamoxifen,,,selective estrogen receptor modulator
 hormone_therapy,fulvestrant,,,estrogen receptor antagonist
+hormone_therapy,leuprolide,,,GnRH agonist
+hormone_therapy,leuprorelin,,,GnRH agonist
+hormone_therapy,goserelin,,,GnRH agonist
+hormone_therapy,triptorelin,,,GnRH agonist
+hormone_therapy,degarelix,,,GnRH antagonist
+hormone_therapy,relugolix,,,GnRH antagonist
+hormone_therapy,bicalutamide,,,androgen receptor inhibitor
+hormone_therapy,enzalutamide,,,androgen receptor inhibitor
+hormone_therapy,apalutamide,,,androgen receptor inhibitor
+hormone_therapy,darolutamide,,,androgen receptor inhibitor
+hormone_therapy,abiraterone,,,androgen biosynthesis inhibitor

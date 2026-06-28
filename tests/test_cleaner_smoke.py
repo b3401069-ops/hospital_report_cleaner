@@ -193,6 +193,51 @@ def test_drug_treatment_mapping_rules_can_classify_new_drug_names() -> None:
     assert flags["chemotherapy"].iloc[0] == ""
 
 
+def test_common_oncology_drug_mapping_rules_cover_future_reports() -> None:
+    mapping = [
+        {
+            "treatment_type": "chemotherapy",
+            "name_pattern": "cytarabine",
+            "order_code": "",
+            "order_code_prefix": "",
+        },
+        {
+            "treatment_type": "targeted_therapy",
+            "name_pattern": "osimertinib",
+            "order_code": "",
+            "order_code_prefix": "",
+        },
+        {
+            "treatment_type": "immunotherapy",
+            "name_pattern": "avelumab",
+            "order_code": "",
+            "order_code_prefix": "",
+        },
+        {
+            "treatment_type": "hormone_therapy",
+            "name_pattern": "abiraterone",
+            "order_code": "",
+            "order_code_prefix": "",
+        },
+    ]
+    order_code = pd.Series(["A", "B", "C", "D"])
+    order_name = pd.Series(
+        [
+            "Cytarabine 100mg/vial",
+            "Osimertinib 80mg tablet",
+            "Avelumab 200mg vial",
+            "Abiraterone 250mg tablet",
+        ]
+    )
+
+    flags = _classify_drug_treatment(order_code, order_name, mapping)
+
+    assert flags["chemotherapy"].tolist() == ["Y", "", "", ""]
+    assert flags["targeted_therapy"].tolist() == ["", "Y", "", ""]
+    assert flags["immunotherapy"].tolist() == ["", "", "Y", ""]
+    assert flags["hormone_therapy"].tolist() == ["", "", "", "Y"]
+
+
 def test_standardize_treatment_plan_reads_case_list_treatment_columns() -> None:
     frame = pd.DataFrame(
         {
