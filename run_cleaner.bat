@@ -39,15 +39,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Checking required Python packages...
-%PYTHON_CMD% -c "import pandas, openpyxl, xlrd, dateutil" >nul 2>nul
-if errorlevel 1 (
-    echo Required packages are missing. Installing from requirements.txt...
-    %PYTHON_CMD% -m pip install -r requirements.txt
+if /I not "%COMMAND%"=="check-env" (
+    echo Checking required Python packages...
+    %PYTHON_CMD% -c "import pandas, openpyxl, xlrd, dateutil" >nul 2>nul
     if errorlevel 1 (
-        echo Package installation failed.
-        pause
-        exit /b 1
+        echo Required packages are missing. Installing from requirements.txt...
+        %PYTHON_CMD% -m pip install -r requirements.txt
+        if errorlevel 1 (
+            echo Package installation failed.
+            pause
+            exit /b 1
+        )
     )
 )
 

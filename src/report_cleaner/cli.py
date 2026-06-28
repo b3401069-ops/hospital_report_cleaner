@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import argparse
 
-from .cleaner import export_cleaned_report, run_cleaning
 from .config import build_paths
-from .mapping_review import apply_mapping_review_files, export_mapping_review_files
+from .environment import (
+    build_environment_checks,
+    environment_has_errors,
+    format_environment_checks,
+)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -12,13 +15,22 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["clean", "export-mapping-review", "apply-mapping-review"],
+        choices=["clean", "export-mapping-review", "apply-mapping-review", "check-env"],
         default="clean",
     )
     args = parser.parse_args(argv)
     paths = build_paths()
 
+    if args.command == "check-env":
+        checks = build_environment_checks(paths)
+        print(format_environment_checks(checks))
+        if environment_has_errors(checks):
+            raise SystemExit(1)
+        return
+
     if args.command == "export-mapping-review":
+        from .mapping_review import export_mapping_review_files
+
         drug_file, order_file, stage_file = export_mapping_review_files(paths)
         print("Mapping review CSV files generated.")
         print(f"Drug review: {drug_file}")
@@ -27,12 +39,16 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     if args.command == "apply-mapping-review":
+        from .mapping_review import apply_mapping_review_files
+
         result = apply_mapping_review_files(paths)
         print("Mapping review CSV files applied.")
         print(f"Drug mapping rows added: {result['drug_rows_added']}")
         print(f"Treatment order mapping rows added: {result['order_rows_added']}")
         print(f"TNM stage mapping rows added: {result['stage_rows_added']}")
         return
+
+    from .cleaner import export_cleaned_report, run_cleaning
 
     (
         cleaned_frame,
