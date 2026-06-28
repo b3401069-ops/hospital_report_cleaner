@@ -8,6 +8,7 @@ from report_cleaner.cleaner import (
     _build_unmatched_icd10_report,
     _classify_drug_treatment,
     _classify_order_treatment,
+    _load_drug_treatment_mapping,
     _load_order_treatment_mapping,
     _standardize_guideline_drug,
     _standardize_inpatient,
@@ -229,6 +230,19 @@ def test_common_oncology_drug_mapping_rules_cover_future_reports() -> None:
             "Abiraterone 250mg tablet",
         ]
     )
+
+    flags = _classify_drug_treatment(order_code, order_name, mapping)
+
+    assert flags["chemotherapy"].tolist() == ["Y", "", "", ""]
+    assert flags["targeted_therapy"].tolist() == ["", "Y", "", ""]
+    assert flags["immunotherapy"].tolist() == ["", "", "Y", ""]
+    assert flags["hormone_therapy"].tolist() == ["", "", "", "Y"]
+
+
+def test_hospital_common_oncology_order_codes_are_mapped() -> None:
+    mapping = _load_drug_treatment_mapping(build_paths().drug_treatment_mapping_file)
+    order_code = pd.Series(["ICAR", "GIAVA", "GIMFI", "IFAL"])
+    order_name = pd.Series(["", "", "", ""])
 
     flags = _classify_drug_treatment(order_code, order_name, mapping)
 

@@ -128,3 +128,147 @@ hormone_therapy,enzalutamide,,,androgen receptor inhibitor
 hormone_therapy,apalutamide,,,androgen receptor inhibitor
 hormone_therapy,darolutamide,,,androgen receptor inhibitor
 hormone_therapy,abiraterone,,,androgen biosynthesis inhibitor
+chemotherapy,,IADR2,,Taipei Hospital common oncology drug table; generic: Doxorubicin HCl(liposome) 2mg/ml 10ml; cancers: 乳癌、肝癌、淋巴癌、膀胱癌
+chemotherapy,,IADR3,,Taipei Hospital common oncology drug table; generic: Doxorubicin 10mg; cancers: 乳癌、肝癌、淋巴癌、膀胱癌
+chemotherapy,,IADR5,,Taipei Hospital common oncology drug table; generic: Doxorubicin 2mg/ml 5ml; cancers: 乳癌、肝癌、淋巴癌、膀胱癌
+chemotherapy,,IAND,,Taipei Hospital common oncology drug table; generic: Azacitidine 100mg; cancers: 淋巴癌
+chemotherapy,,IBLE,,Taipei Hospital common oncology drug table; generic: Bleomycin HCl 15mg; cancers: 淋巴癌
+chemotherapy,,IBRA,,Taipei Hospital common oncology drug table; generic: paclitaxel (albumin-bound); cancers: 乳癌、肺癌、口腔癌、膀胱癌
+chemotherapy,,ICAR,,Taipei Hospital common oncology drug table; generic: Carboplatin 10mg/ml 15ml; cancers: 乳癌、肺癌、口腔癌、淋巴癌、攝護腺癌、膀胱癌
+chemotherapy,,ICIS,,Taipei Hospital common oncology drug table; generic: Cisplatin 1mg/ml 50ml; cancers: 乳癌、肺癌、淋巴癌、膀胱癌
+chemotherapy,,ICYT,,Taipei Hospital common oncology drug table; generic: Cytarabine 500mg; cancers: 淋巴癌
+chemotherapy,,ICYT1,,Taipei Hospital common oncology drug table; generic: Cytarabine 500mg; cancers: 淋巴癌
+chemotherapy,,IDAC,,Taipei Hospital common oncology drug table; generic: Dacarbazine 200mg; cancers: 淋巴癌
+chemotherapy,,IELO,,Taipei Hospital common oncology drug table; generic: Oxaliplatin 5mg/ml 10ml; cancers: 淋巴癌
+chemotherapy,,IELO1,,Taipei Hospital common oncology drug table; generic: Oxaliplatin 5mg/ml 10ml; cancers: 淋巴癌
+chemotherapy,,IELO2,,Taipei Hospital common oncology drug table; generic: Oxaliplatin 5mg/ml 10ml; cancers: 淋巴癌
+chemotherapy,,IELO3,,Taipei Hospital common oncology drug table; generic: Oxaliplatin 5mg/ml 10ml; cancers: 淋巴癌
+chemotherapy,,IEND,,Taipei Hospital common oncology drug table; generic: Cyclophosphamide 200mg; cancers: 乳癌、淋巴癌
+chemotherapy,,IEND1,,Taipei Hospital common oncology drug table; generic: Cyclophosphamide 500mg; cancers: 乳癌、淋巴癌
+chemotherapy,,IEPI1,,Taipei Hospital common oncology drug table; generic: Epirubicin HCl 10mg; cancers: 乳癌
+chemotherapy,,IEPI2,,Taipei Hospital common oncology drug table; generic: Epirubicin HCl 2mg/ml 5ml; cancers: 乳癌
+chemotherapy,,IGEM1,,Taipei Hospital common oncology drug table; generic: Gemcitabine HCl 200mg; cancers: 乳癌、肺癌、口腔癌、淋巴癌、膀胱癌
+chemotherapy,,IGEM2,,Taipei Hospital common oncology drug table; generic: Gemcitabine HCl 200mg; cancers: 乳癌、肺癌、口腔癌、淋巴癌、膀胱癌
+chemotherapy,,IGEM3,,Taipei Hospital common oncology drug table; generic: Gemcitabine HCl 200mg; cancers: 乳癌、肺癌、口腔癌、淋巴癌、膀胱癌
+chemotherapy,,IGEM4,,Taipei Hospital common oncology drug table; generic: Gemcitabine HCl 200mg; cancers: 乳癌、肺癌、口腔癌、淋巴癌、膀胱癌
+chemotherapy,,IHOL1,,Taipei Hospital common oncology drug table; generic: Ifosfamide 2gm; cancers: 淋巴癌、膀胱癌
+chemotherapy,,IHOL2,,Taipei Hospital common oncology drug table; generic: Ifosfamide 2gm; cancers: 淋巴癌、膀胱癌
+chemotherapy,,IHYC,,Taipei Hospital common oncology drug table; generic: Topotecan 4mg; cancers: 肺癌
+chemotherapy,,IHYC1,,Taipei Hospital common oncology drug table; generic: Topotecan 4mg; cancers: 肺癌
+chemotherapy,,IIRI,,Taipei Hospital common oncology drug table; generic: Irinotecan 100mg/5ml; cancers: 肺癌
+chemotherapy,,IIRI1,,Taipei Hospital common oncology drug table; generic: Irinotecan 100mg/5ml; cancers: 肺癌
+chemotherapy,,IIRI2,,Taipei Hospital common oncology drug table; generic: Irinotecan 100mg/5ml; cancers: 肺癌
+chemotherapy,,IKEM3,,Taipei Hospital common oncology drug table; generic: Cisplatin 1mg/ml 50ml; cancers: 乳癌、肺癌、淋巴癌、膀胱癌
+chemotherapy,,IMET3,,Taipei Hospital common oncology drug table; generic: Methotrexate 100mg/ml 10ml; cancers: 乳癌、淋巴癌、膀胱癌
+chemotherapy,,IMTX,,Taipei Hospital common oncology drug table; generic: Methotrexate 25mg/ml 2ml; cancers: 乳癌、淋巴癌、膀胱癌
+chemotherapy,,IMTX1,,Taipei Hospital common oncology drug table; generic: Methotrexate 25mg/ml 2ml; cancers: 乳癌、淋巴癌、膀胱癌
+chemotherapy,,IMTX2,,Taipei Hospital common oncology drug table; generic: Methotrexate 100mg/ml 10ml; cancers: 乳癌、淋巴癌、膀胱癌
+chemotherapy,,IONC,,Taipei Hospital common oncology drug table; generic: Vincristine 1mg/ml 1ml; cancers: 淋巴癌
+chemotherapy,,IONC1,,Taipei Hospital common oncology drug table; generic: Vincristine 1mg/ml 1ml; cancers: 淋巴癌
+chemotherapy,,IONI,,Taipei Hospital common oncology drug table; generic: Irinotecan HCl liposome 5mg/ml 10ml; cancers: 肺癌
+chemotherapy,,IPAC,,Taipei Hospital common oncology drug table; generic: Paclitaxel 6mg/ml 10ml; cancers: 乳癌、肺癌、口腔癌、膀胱癌
+chemotherapy,,IPAC2,,Taipei Hospital common oncology drug table; generic: Paclitaxel 6mg/ml 10ml; cancers: 乳癌、肺癌、口腔癌、膀胱癌
+chemotherapy,,ITAC2,,Taipei Hospital common oncology drug table; generic: Docetaxel 10mg/ml 2ml; cancers: 乳癌、肺癌、口腔癌、膀胱癌
+chemotherapy,,ITAX,,Taipei Hospital common oncology drug table; generic: Docetaxel 20mg/ml 1ml; cancers: 乳癌、肺癌、口腔癌、膀胱癌
+chemotherapy,,ITAX2,,Taipei Hospital common oncology drug table; generic: Docetaxel 20mg/ml 1ml; cancers: 乳癌、肺癌、口腔癌、膀胱癌
+chemotherapy,,ITAX3,,Taipei Hospital common oncology drug table; generic: Docetaxel 20mg/ml 1ml; cancers: 乳癌、肺癌、口腔癌、膀胱癌
+chemotherapy,,ITYN,,Taipei Hospital common oncology drug table; generic: Docetaxel 20mg/ml 1ml; cancers: 乳癌、肺癌、口腔癌、膀胱癌
+chemotherapy,,IVEP,,Taipei Hospital common oncology drug table; generic: Etoposide 20mg/ml 5ml; cancers: 肺癌、淋巴癌、乳癌
+chemotherapy,,IVIN1,,Taipei Hospital common oncology drug table; generic: Vinblastine 1mg/ml 10ml; cancers: 淋巴癌、膀胱癌
+chemotherapy,,IVIN2,,Taipei Hospital common oncology drug table; generic: Vinblastine 1mg/ml 10ml; cancers: 淋巴癌、膀胱癌
+chemotherapy,,IZEP,,Taipei Hospital common oncology drug table; generic: Lurbinectedin 4mg; cancers: 肺癌
+chemotherapy,,IZEP1,,Taipei Hospital common oncology drug table; generic: Lurbinectedin 4mg; cancers: 肺癌
+chemotherapy,,OEND,,Taipei Hospital common oncology drug table; generic: Cyclophosphamide 50mg; cancers: 乳癌、淋巴癌
+chemotherapy,,OEND1,,Taipei Hospital common oncology drug table; generic: Cyclophosphamide 50mg; cancers: 乳癌、淋巴癌
+chemotherapy,,OLEU,,Taipei Hospital common oncology drug table; generic: Chlorambucil 2mg; cancers: 淋巴癌
+chemotherapy,,OMET3,,Taipei Hospital common oncology drug table; generic: Methotrexate 2.5mg; cancers: 乳癌、淋巴癌、膀胱癌
+chemotherapy,,ONAV2,,Taipei Hospital common oncology drug table; generic: Vinorelbine 20mg; cancers: 乳癌、肺癌
+chemotherapy,,ONAV3,,Taipei Hospital common oncology drug table; generic: Vinorelbine 30mg; cancers: 乳癌、肺癌
+chemotherapy,,ONAV4,,Taipei Hospital common oncology drug table; generic: Vinorelbine 30mg; cancers: 乳癌、肺癌
+chemotherapy,,OVEP,,Taipei Hospital common oncology drug table; generic: Etoposide 50mg; cancers: 肺癌、淋巴癌、乳癌
+chemotherapy,,OXEL3,,Taipei Hospital common oncology drug table; generic: Capecitabine 500mg; cancers: 乳癌、口腔癌
+chemotherapy,,OXEL5,,Taipei Hospital common oncology drug table; generic: Capecitabine 500mg; cancers: 乳癌、口腔癌
+targeted_therapy,,GIAVA,,Taipei Hospital common oncology drug table; generic: Bevacizumab 25mg/ml 4ml; cancers: 肺癌、肝癌、乳癌
+targeted_therapy,,GICYR,,Taipei Hospital common oncology drug table; generic: Ramucirumab 100MG/10ML; cancers: 肺癌、肝癌
+targeted_therapy,,GIMVA,,Taipei Hospital common oncology drug table; generic: Bevacizumab 25mg/ml 4ml; cancers: 肺癌、肝癌、乳癌
+targeted_therapy,,IADC,,Taipei Hospital common oncology drug table; generic: Brentuximab vedotin 50mg; cancers: 淋巴癌
+targeted_therapy,,IAVA1,,Taipei Hospital common oncology drug table; generic: Bevacizumab 25mg/ml 4ml; cancers: 肺癌、肝癌、乳癌
+targeted_therapy,,ICYR,,Taipei Hospital common oncology drug table; generic: Ramucirumab 100MG/10ML; cancers: 肺癌、肝癌
+targeted_therapy,,ICYR1,,Taipei Hospital common oncology drug table; generic: Ramucirumab 100MG/10ML; cancers: 肺癌、肝癌
+targeted_therapy,,IENH,,Taipei Hospital common oncology drug table; generic: Trastuzumab deruxtecan; cancers: 乳癌、肺癌、口腔癌
+targeted_therapy,,IENH1,,Taipei Hospital common oncology drug table; generic: Trastuzumab deruxtecan; cancers: 乳癌、肺癌、口腔癌
+targeted_therapy,,IERB2,,Taipei Hospital common oncology drug table; generic: Cetuximab 5mg/ml 20ml; cancers: 口腔癌
+targeted_therapy,,IHER2,,Taipei Hospital common oncology drug table; generic: Trastuzumab 440mg/20ml; cancers: 乳癌、肺癌、口腔癌
+targeted_therapy,,IHER4,,Taipei Hospital common oncology drug table; generic: Trastuzumab 600mg/5ml; cancers: 乳癌、肺癌、口腔癌
+targeted_therapy,,IHER5,,Taipei Hospital common oncology drug table; generic: Trastuzumab 440mg/20ml; cancers: 乳癌、肺癌、口腔癌
+targeted_therapy,,IKAD,,Taipei Hospital common oncology drug table; generic: Trastuzumab emtansine 100mg/5ml; cancers: 乳癌
+targeted_therapy,,IMAB1,,Taipei Hospital common oncology drug table; generic: Rituximab 10mg/ml 10ml; cancers: 淋巴癌
+targeted_therapy,,IMAB2,,Taipei Hospital common oncology drug table; generic: Rituximab 10mg/ml 50ml; cancers: 淋巴癌
+targeted_therapy,,IMVA,,Taipei Hospital common oncology drug table; generic: Bevacizumab 25mg/ml 4ml; cancers: 肺癌、肝癌、乳癌
+targeted_therapy,,IPER2,,Taipei Hospital common oncology drug table; generic: Pertuzumab 420mg/vial; cancers: 乳癌
+targeted_therapy,,IRIX,,Taipei Hospital common oncology drug table; generic: Rituximab 10mg/ml 10ml; cancers: 淋巴癌
+targeted_therapy,,IRIX1,,Taipei Hospital common oncology drug table; generic: Rituximab 10mg/ml 50ml; cancers: 淋巴癌
+targeted_therapy,,IVEL1,,Taipei Hospital common oncology drug table; generic: Bortezomib 3.5mg; cancers: 淋巴癌
+targeted_therapy,,IVEL2,,Taipei Hospital common oncology drug table; generic: Bortezomib 3.5mg; cancers: 淋巴癌
+targeted_therapy,,IVEL3,,Taipei Hospital common oncology drug table; generic: Bortezomib 3.5mg; cancers: 淋巴癌
+targeted_therapy,,IVEL4,,Taipei Hospital common oncology drug table; generic: Bortezomib 3.5mg; cancers: 淋巴癌
+targeted_therapy,,OAFI,,Taipei Hospital common oncology drug table; generic: Everolimus 5mg; cancers: 淋巴癌、乳癌
+targeted_therapy,,OALE1,,Taipei Hospital common oncology drug table; generic: Alectinib 150mg; cancers: 肺癌、淋巴癌
+targeted_therapy,,OBRU,,Taipei Hospital common oncology drug table; generic: Zanubrutinib 80 mg; cancers: 淋巴癌
+targeted_therapy,,OCAB,,Taipei Hospital common oncology drug table; generic: Cabozantinib 60mg; cancers: 肝癌
+targeted_therapy,,OGIO,,Taipei Hospital common oncology drug table; generic: Afatinib 30mg; cancers: 肺癌
+targeted_therapy,,OGIO1,,Taipei Hospital common oncology drug table; generic: Afatinib 40mg; cancers: 肺癌
+targeted_therapy,,OIBR1,,Taipei Hospital common oncology drug table; generic: Palbociclib 125mg; cancers: 乳癌
+targeted_therapy,,OIBR2,,Taipei Hospital common oncology drug table; generic: Palbociclib 100mg; cancers: 乳癌
+targeted_therapy,,OIBR3,,Taipei Hospital common oncology drug table; generic: Palbociclib 100mg; cancers: 乳癌
+targeted_therapy,,OIMB,,Taipei Hospital common oncology drug table; generic: Ibrutinib 140 mg; cancers: 淋巴癌
+targeted_therapy,,OIRE,,Taipei Hospital common oncology drug table; generic: Gefitinib 250mg; cancers: 肺癌
+targeted_therapy,,OIRE1,,Taipei Hospital common oncology drug table; generic: Gefitinib 250mg; cancers: 肺癌
+targeted_therapy,,OJAK1,,Taipei Hospital common oncology drug table; generic: Ruxolitinib 5mg; cancers: 淋巴癌
+targeted_therapy,,OJAK3,,Taipei Hospital common oncology drug table; generic: Ruxolitinib 15mg; cancers: 淋巴癌
+targeted_therapy,,OJAK4,,Taipei Hospital common oncology drug table; generic: Ruxolitinib 20mg; cancers: 淋巴癌
+targeted_therapy,,OJAK5,,Taipei Hospital common oncology drug table; generic: Ruxolitinib 20mg; cancers: 淋巴癌
+targeted_therapy,,OKIS,,Taipei Hospital common oncology drug table; generic: Ribociclib 200mg; cancers: 乳癌
+targeted_therapy,,OLOR,,Taipei Hospital common oncology drug table; generic: Lorlatinib 25mg; cancers: 肺癌、淋巴癌
+targeted_therapy,,OLYN,,Taipei Hospital common oncology drug table; generic: Olaparib 150mg; cancers: 乳癌
+targeted_therapy,,OLYN1,,Taipei Hospital common oncology drug table; generic: Olaparib 150mg; cancers: 乳癌
+targeted_therapy,,ONEX2,,Taipei Hospital common oncology drug table; generic: Sorafenib 200mg; cancers: 肝癌
+targeted_therapy,,ONEX4,,Taipei Hospital common oncology drug table; generic: Sorafenib 200mg; cancers: 肝癌
+targeted_therapy,,OREV,,Taipei Hospital common oncology drug table; generic: Lenalidomide 25mg; cancers: 淋巴癌
+targeted_therapy,,OREV1,,Taipei Hospital common oncology drug table; generic: Lenalidomide 5mg; cancers: 淋巴癌
+targeted_therapy,,OROZ,,Taipei Hospital common oncology drug table; generic: Entrectinib 200mg; cancers: 乳癌、肺癌
+targeted_therapy,,OROZ1,,Taipei Hospital common oncology drug table; generic: Entrectinib 200mg; cancers: 乳癌、肺癌
+targeted_therapy,,OTAR1,,Taipei Hospital common oncology drug table; generic: Erlotinib 150mg; cancers: 肺癌
+targeted_therapy,,OTAR3,,Taipei Hospital common oncology drug table; generic: Osimertinib 80mg; cancers: 肺癌
+targeted_therapy,,OTAR4,,Taipei Hospital common oncology drug table; generic: Erlotinib 150mg; cancers: 肺癌
+targeted_therapy,,OTAR5,,Taipei Hospital common oncology drug table; generic: Erlotinib 150mg; cancers: 肺癌
+targeted_therapy,,OTEP,,Taipei Hospital common oncology drug table; generic: Tepotinib 225mg; cancers: 肺癌
+targeted_therapy,,OTEP1,,Taipei Hospital common oncology drug table; generic: Tepotinib 225mg; cancers: 肺癌
+targeted_therapy,,OTYK1,,Taipei Hospital common oncology drug table; generic: Lapatinib 250mg; cancers: 乳癌
+targeted_therapy,,OVER4,,Taipei Hospital common oncology drug table; generic: abemaciclib 150mg; cancers: 乳癌
+targeted_therapy,,OVER5,,Taipei Hospital common oncology drug table; generic: abemaciclib 150mg; cancers: 乳癌
+targeted_therapy,,OVIZ,,Taipei Hospital common oncology drug table; generic: Dacomitinib 30mg; cancers: 肺癌
+targeted_therapy,,OVIZ1,,Taipei Hospital common oncology drug table; generic: Dacomitinib 15mg; cancers: 肺癌
+targeted_therapy,,OVIZ2,,Taipei Hospital common oncology drug table; generic: Dacomitinib 30mg; cancers: 肺癌
+targeted_therapy,,OVIZ3,,Taipei Hospital common oncology drug table; generic: Dacomitinib 15mg; cancers: 肺癌
+targeted_therapy,,OXAL,,Taipei Hospital common oncology drug table; generic: Crizotinib 250mg; cancers: 肺癌、淋巴癌
+immunotherapy,,GIMFI,,Taipei Hospital common oncology drug table; generic: Durvalumab(贈藥); cancers: 肺癌、肝癌、膀胱癌
+immunotherapy,,IKEY,,Taipei Hospital common oncology drug table; generic: Pembrolizumab 100mg/vial; cancers: 乳癌、肺癌、口腔癌、肝癌、淋巴癌、膀胱癌
+immunotherapy,,IMFI,,Taipei Hospital common oncology drug table; generic: Durvalumab; cancers: 肺癌、肝癌、膀胱癌
+immunotherapy,,IMJI,,Taipei Hospital common oncology drug table; generic: Tremelimumab 20 MG/ML; cancers: 肝癌
+immunotherapy,,IOPD,,Taipei Hospital common oncology drug table; generic: Nivolumab 10mg/mL 2ml; cancers: 肺癌、口腔癌、肝癌、淋巴癌、大腸直腸癌、膀胱癌
+immunotherapy,,IOPD1,,Taipei Hospital common oncology drug table; generic: Nivolumab 10mg/mL 10ml; cancers: 肺癌、口腔癌、肝癌、淋巴癌、大腸直腸癌、膀胱癌
+immunotherapy,,IOPD2,,Taipei Hospital common oncology drug table; generic: Nivolumab 10mg/mL 12ml; cancers: 肺癌、口腔癌、肝癌、淋巴癌、大腸直腸癌、膀胱癌
+immunotherapy,,IOPD3,,Taipei Hospital common oncology drug table; generic: Nivolumab 10mg/mL 12ml; cancers: 肺癌、口腔癌、肝癌、淋巴癌、大腸直腸癌、膀胱癌
+immunotherapy,,IOPD4,,Taipei Hospital common oncology drug table; generic: Nivolumab 10mg/mL 10ml; cancers: 肺癌、口腔癌、肝癌、淋巴癌、大腸直腸癌、膀胱癌
+immunotherapy,,ITEC1,,Taipei Hospital common oncology drug table; generic: Atezolizumab 1200mg 20ml; cancers: 肺癌、肝癌、大腸直腸癌、膀胱癌
+immunotherapy,,IYER,,Taipei Hospital common oncology drug table; generic: Ipilimumab 5mg/mL 10ml; cancers: 肺癌、肝癌、大腸直腸癌
+hormone_therapy,,IFAL,,Taipei Hospital common oncology drug table; generic: Fulvestrant 50mg/ml 5ml; cancers: 乳癌
+hormone_therapy,,IFAL1,,Taipei Hospital common oncology drug table; generic: Fulvestrant 50mg/ml 5ml; cancers: 乳癌
+hormone_therapy,,IFAL2,,Taipei Hospital common oncology drug table; generic: Fulvestrant 50mg/ml 5ml; cancers: 乳癌
+hormone_therapy,,OANA,,Taipei Hospital common oncology drug table; generic: Anastrozole 1mg; cancers: 乳癌
+hormone_therapy,,OANA2,,Taipei Hospital common oncology drug table; generic: Anastrozole 1mg; cancers: 乳癌
+hormone_therapy,,OARO1,,Taipei Hospital common oncology drug table; generic: Exemestane 25mg; cancers: 乳癌
+hormone_therapy,,OFEM1,,Taipei Hospital common oncology drug table; generic: Letrozole 2.5mg; cancers: 乳癌
+hormone_therapy,,OFEM2,,Taipei Hospital common oncology drug table; generic: Letrozole 2.5mg; cancers: 乳癌
+hormone_therapy,,ONOL,,Taipei Hospital common oncology drug table; generic: Tamoxifen 10mg; cancers: 乳癌
