@@ -2,13 +2,18 @@
 
 醫院癌症報表清洗器。把 `raw/` 裡多個 Excel 報表整理成 `output/cleaned_reports.xlsx`，並產生標準化資料、病人清單、中文摘要、mapping 待確認清單與 TNM/stage review。
 
-## 給個管師快速使用
+請先看這份短版操作說明：
 
-1. 把要清洗的 Excel 報表放到 `raw/`。
-2. 第一次使用或換新電腦時，先按兩下 `install_dependencies.bat`。
-3. 平常產生報表時，按兩下 `執行報表清洗.bat`。
-4. 完成後，到 `output/cleaned_reports.xlsx` 查看結果。
-5. 若要檢查電腦環境但不跑報表，按兩下 `檢查執行環境.bat`。
+[使用說明_給個管師.md](使用說明_給個管師.md)
+
+## 最短使用方法
+
+1. 解壓縮專案資料夾。
+2. 第一次使用先按兩下 `install_dependencies.bat`。
+3. 把要清洗的 Excel 報表放進 `raw/`。
+4. 按兩下 `執行報表清洗.bat`。
+5. 到 `output/cleaned_reports.xlsx` 查看結果。
+6. 如果想先檢查電腦能不能跑，按兩下 `檢查執行環境.bat`。
 
 ## Windows 批次檔
 
