@@ -34,6 +34,16 @@ python -m pytest
 
 ## 執行
 
+一般使用者可直接雙擊專案根目錄的批次檔：
+
+- `執行報表清洗.bat`：產生 `output/cleaned_reports.xlsx`
+- `匯出待確認mapping.bat`：產生 `output/pending_*_mapping.csv`
+- `套用已確認mapping.bat`：將已填好的 pending mapping 追加到正式 `mapping/*.csv`
+
+批次檔會自動切到專案資料夾、檢查 Python 套件，必要時用 `requirements.txt` 安裝缺少的套件。
+
+進階使用者也可以用命令列執行：
+
 ```powershell
 $env:PYTHONPATH="src"
 python -m report_cleaner.cli
