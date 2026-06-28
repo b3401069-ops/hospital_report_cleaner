@@ -8,6 +8,7 @@ from report_cleaner.cleaner import (
     _build_unmatched_icd10_report,
     _classify_drug_treatment,
     _classify_order_treatment,
+    _load_order_treatment_mapping,
     _standardize_guideline_drug,
     _standardize_inpatient,
     _standardize_order_detail,
@@ -253,6 +254,17 @@ def test_order_treatment_mapping_rules_can_classify_procedure_codes() -> None:
 
     assert flags["surgery"].iloc[0] == "Y"
     assert flags["chemotherapy"].iloc[0] == ""
+
+
+def test_hospital_surgery_and_radiation_order_codes_are_mapped() -> None:
+    mapping = _load_order_treatment_mapping(build_paths().order_treatment_mapping_file)
+    order_code = pd.Series(["75032B", "74216B", "63016B", "36011B"])
+    order_name = pd.Series(["", "", "", ""])
+
+    flags = _classify_order_treatment("hospital order detail", order_code, order_name, mapping)
+
+    assert flags["surgery"].tolist() == ["Y", "Y", "Y", ""]
+    assert flags["radiation_therapy"].tolist() == ["", "", "", "Y"]
 
 
 def test_standardize_order_detail_uses_mapping_cancer_type() -> None:

@@ -1,14 +1,14 @@
 ﻿treatment_type,name_pattern,order_code,order_code_prefix,cancer_type,diagnosis_text,notes
-chemotherapy,,37038B,,,chemotherapy infusion order
-chemotherapy,,37039B,,,chemotherapy infusion order
-chemotherapy,,37040B,,,chemotherapy infusion order
-chemotherapy,,37041B,,,chemotherapy infusion order
-radiation_therapy,,36015B,,,radiation treatment planning
-tace,,33075BR,,,TAE/TACE vascular embolization
-tace,,33144BR,,,TAE/TACE vascular embolization with Lipiodol
-rfa,,37042C,,,RFA liver tumor ablation
-rfa,,37043C,,,RFA liver tumor ablation
-rfa,,37044C,,,RFA liver tumor ablation
+chemotherapy,,37038B,,,,chemotherapy infusion order
+chemotherapy,,37039B,,,,chemotherapy infusion order
+chemotherapy,,37040B,,,,chemotherapy infusion order
+chemotherapy,,37041B,,,,chemotherapy infusion order
+radiation_therapy,,36015B,,,,radiation treatment planning
+tace,,33075BR,,,,TAE/TACE vascular embolization
+tace,,33144BR,,,,TAE/TACE vascular embolization with Lipiodol
+rfa,,37042C,,,,RFA liver tumor ablation
+rfa,,37043C,,,,RFA liver tumor ablation
+rfa,,37044C,,,,RFA liver tumor ablation
 surgery,,63014B,,BR_乳癌,乳癌,breast surgery
 surgery,,63012B,,BR_乳癌,乳癌,breast surgery
 surgery,,63005C,,BR_乳癌,乳癌,breast surgery
@@ -41,3 +41,18 @@ surgery,,75002B,,HC_肝癌,肝癌,liver surgery
 surgery,,75031B,,HC_肝癌,肝癌,liver surgery
 surgery,,50011C,,UB_膀胱癌,膀胱癌,bladder cancer procedure
 surgery,,78008C,,UB_膀胱癌,膀胱癌,bladder cancer surgery
+radiation_therapy,,36011B,,,,radiation therapy order; procedure: 直線加速器遠隔照射治療，每一簡單照野; source: hospital surgery order workbook
+radiation_therapy,,36012B,,,,radiation therapy order; procedure: 直線加速器遠隔照射治療，每一複雜照野; source: hospital surgery order workbook
+surgery,,63004B,,BR_乳癌,乳癌,breast surgery; procedure: 單純乳房切除術 － 雙側; source: hospital surgery order workbook
+surgery,,63006C,,BR_乳癌,乳癌,breast surgery; procedure: 乳房腫瘤切除術 － 雙側; source: hospital surgery order workbook
+surgery,,63008B,,BR_乳癌,乳癌,breast surgery; procedure: 改良式乳房根除手術 － 雙側; source: hospital surgery order workbook
+surgery,,63013B,,BR_乳癌,乳癌,breast surgery; procedure: 乳房部分切除手術併標準腋下淋巴廓清術－單側; source: hospital surgery order workbook
+surgery,,63016B,,BR_乳癌,乳癌,breast surgery; procedure: 乳房全切除手術－單側; source: hospital surgery order workbook
+surgery,,74216B,,CR_結腸直腸癌,結腸直腸癌,colorectal surgery; procedure: Combined abdomino-perineal resection; source: hospital surgery order workbook
+surgery,,75005B,,HC_肝癌,肝癌,liver surgery; procedure: 肝區域切除術; source: hospital surgery order workbook
+surgery,,75015B,,HC_肝癌,肝癌,liver surgery; procedure: 右肝葉切除術; source: hospital surgery order workbook
+surgery,,75016B,,HC_肝癌,肝癌,liver surgery; procedure: 左肝葉切除術; source: hospital surgery order workbook
+surgery,,75017B,,HC_肝癌,肝癌,liver surgery; procedure: 擴大右肝葉切除術; source: hospital surgery order workbook
+surgery,,75018B,,HC_肝癌,肝癌,liver surgery; procedure: 擴大左肝葉切除術; source: hospital surgery order workbook
+surgery,,75032B,,HC_肝癌,肝癌,liver surgery; procedure: 腹腔鏡擴大右肝葉切除術; source: hospital surgery order workbook
+surgery,,75033B,,HC_肝癌,肝癌,liver surgery; procedure: 腹腔鏡擴大左葉切除術; source: hospital surgery order workbook
