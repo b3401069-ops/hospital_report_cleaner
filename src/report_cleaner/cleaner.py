@@ -6,6 +6,16 @@ import re
 import pandas as pd
 
 from .config import CSV_ENCODING, ProjectPaths
+from .excel_report import (
+    SHEET_PATIENT_LIST,
+    SHEET_STAGE_REVIEW,
+    SHEET_SUMMARY,
+    SHEET_TREND,
+    SHEET_UNMAPPED_DRUGS,
+    SHEET_UNMAPPED_TREATMENTS,
+    SHEET_UNMATCHED_ICD10,
+    format_report_workbook,
+)
 
 SUPPORTED_SUFFIXES = {".xlsx", ".xls", ".csv"}
 SENSITIVE_COLUMN_PATTERNS = (
@@ -162,6 +172,7 @@ PATIENT_LIST_ZH_HEADERS = {
     "clinical_tnm": "臨床分期",
     "pathologic_tnm": "病理分期",
     "final_stage": "最終期別",
+    "treatment_summary": "治療摘要",
     "case_category_code": "個案分類代碼",
     "case_category_label": "個案分類",
     "doctor": "主責醫師",
@@ -183,6 +194,111 @@ PATIENT_LIST_ZH_HEADERS = {
     "rfa": "RFA",
     "rfa_date": "RFA日期",
 }
+PATIENT_LIST_ZH_ORDER = [
+    "patient_name",
+    "medical_record_no",
+    "sex",
+    "age_at_diagnosis",
+    "cancer_type",
+    "diagnosis_text",
+    "diagnosis_date",
+    "final_stage",
+    "treatment_summary",
+    "doctor",
+    "manager",
+    "case_category_label",
+    "last_followup_date",
+    "death_date",
+    "survival_days",
+    "chemotherapy",
+    "chemotherapy_date",
+    "targeted_therapy",
+    "targeted_therapy_date",
+    "immunotherapy",
+    "immunotherapy_date",
+    "hormone_therapy",
+    "hormone_therapy_date",
+    "radiation_therapy",
+    "radiation_therapy_date",
+    "surgery",
+    "surgery_date",
+    "tace",
+    "tace_date",
+    "rfa",
+    "rfa_date",
+    "birth_date",
+    "case_id",
+    "icd10_code",
+    "clinical_tnm",
+    "pathologic_tnm",
+    "case_category_code",
+]
+TREATMENT_DISPLAY_LABELS = {
+    "chemotherapy": "化療",
+    "targeted_therapy": "標靶",
+    "immunotherapy": "免疫",
+    "hormone_therapy": "抗荷爾蒙",
+    "radiation_therapy": "放療",
+    "surgery": "手術",
+    "tace": "TACE",
+    "rfa": "RFA",
+}
+REVIEW_HEADER_MAPS = {
+    "unmatched_icd10": {
+        "icd10_code": "ICD10",
+        "cancer_type": "癌別",
+        "diagnosis_text": "診斷名稱",
+        "count": "出現次數",
+        "report_names": "來源報表",
+        "notes": "備註",
+    },
+    "stage_review": {
+        "cancer_type": "癌別",
+        "clinical_tnm": "臨床TNM",
+        "pathologic_tnm": "病理TNM",
+        "primary_tnm": "主要TNM",
+        "final_stage": "最終期別",
+        "final_stage_source": "期別來源",
+        "review_reason": "待確認原因",
+        "count": "出現次數",
+    },
+    "unmapped_drug_orders": {
+        "order_code": "醫令碼",
+        "order_name": "醫令名稱",
+        "count": "出現次數",
+        "report_names": "來源報表",
+        "sample_diagnosis_texts": "診斷範例",
+        "treatment_type": "治療分類",
+        "name_pattern": "藥名關鍵字",
+        "order_code_prefix": "醫令碼前綴",
+        "notes": "備註",
+    },
+    "unmapped_treatment_orders": {
+        "order_code": "醫令碼",
+        "order_name": "醫令名稱",
+        "count": "出現次數",
+        "report_names": "來源報表",
+        "sample_diagnosis_texts": "診斷範例",
+        "treatment_type": "治療分類",
+        "name_pattern": "名稱關鍵字",
+        "order_code_prefix": "醫令碼前綴",
+        "cancer_type": "癌別",
+        "diagnosis_text": "診斷名稱",
+        "notes": "備註",
+    },
+}
+STAGE_REVIEW_REASON_ZH = {
+    "mapped_from_tnm": "已由 TNM mapping 對應",
+    "reported_stage": "來源報表已有期別",
+    "missing_final_stage_with_non_specific_tnm": "TNM 不完整，缺最終期別",
+    "missing_final_stage_with_unknown_tnm": "TNM 含 X，缺最終期別",
+    "missing_final_stage": "有 TNM，缺最終期別",
+}
+STAGE_SOURCE_ZH = {
+    "tnm_mapping": "TNM mapping",
+    "reported": "來源報表",
+}
+SUMMARY_COUNT_HEADER = "個案筆數"
 SPECIAL_CANCER_TYPE_LABELS = {
     "CL": "膽管癌",
     "LCA": "喉癌",
@@ -330,18 +446,48 @@ def export_cleaned_report(
     patient_list_zh_frame = _build_patient_list_zh(patient_list_frame)
     summary_zh_frame = _build_summary_zh(patient_master_frame)
     summary_trend_zh_frame = _build_summary_trend_zh(patient_master_frame)
+    pending_stage_review_frame = _build_pending_stage_review_output(stage_review_frame)
+    unmatched_icd10_zh_frame = _localize_review_frame(
+        unmatched_icd10_frame, "unmatched_icd10"
+    )
+    stage_review_zh_frame = _localize_review_frame(
+        pending_stage_review_frame, "stage_review"
+    )
+    unmapped_drug_orders_zh_frame = _localize_review_frame(
+        unmapped_drug_orders_frame, "unmapped_drug_orders"
+    )
+    unmapped_treatment_orders_zh_frame = _localize_review_frame(
+        unmapped_treatment_orders_frame, "unmapped_treatment_orders"
+    )
+    metrics = _build_export_metrics(
+        standardized_frame,
+        patient_list_frame,
+        unmatched_icd10_frame,
+        pending_stage_review_frame,
+        unmapped_drug_orders_frame,
+        unmapped_treatment_orders_frame,
+    )
     with pd.ExcelWriter(target_file, engine="openpyxl") as writer:
+        patient_list_zh_frame.to_excel(writer, index=False, sheet_name=SHEET_PATIENT_LIST)
+        summary_zh_frame.to_excel(writer, index=False, sheet_name=SHEET_SUMMARY)
+        summary_trend_zh_frame.to_excel(writer, index=False, sheet_name=SHEET_TREND)
+        unmatched_icd10_zh_frame.to_excel(
+            writer, index=False, sheet_name=SHEET_UNMATCHED_ICD10
+        )
+        stage_review_zh_frame.to_excel(writer, index=False, sheet_name=SHEET_STAGE_REVIEW)
+        unmapped_drug_orders_zh_frame.to_excel(
+            writer, index=False, sheet_name=SHEET_UNMAPPED_DRUGS
+        )
+        unmapped_treatment_orders_zh_frame.to_excel(
+            writer, index=False, sheet_name=SHEET_UNMAPPED_TREATMENTS
+        )
+
         cleaned_frame.to_excel(writer, index=False, sheet_name="cleaned_data")
         standardized_frame.to_excel(writer, index=False, sheet_name="standardized_data")
         patient_master_frame.to_excel(writer, index=False, sheet_name="patient_master")
         patient_list_frame.to_excel(writer, index=False, sheet_name="patient_list")
-        patient_list_zh_frame.to_excel(writer, index=False, sheet_name="patient_list_zh")
-        summary_zh_frame.to_excel(writer, index=False, sheet_name="summary_zh")
-        summary_trend_zh_frame.to_excel(writer, index=False, sheet_name="summary_trend_zh")
-        unmatched_icd10_frame.to_excel(writer, index=False, sheet_name="unmatched_icd10")
         stage_review_frame.to_excel(writer, index=False, sheet_name="stage_review")
-        unmapped_drug_orders_frame.to_excel(writer, index=False, sheet_name="unmapped_drug_orders")
-        unmapped_treatment_orders_frame.to_excel(writer, index=False, sheet_name="unmapped_treatment_orders")
+        format_report_workbook(writer.book, metrics)
     return target_file
 
 
@@ -2129,20 +2275,85 @@ def _build_patient_list(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def _build_patient_list_zh(frame: pd.DataFrame) -> pd.DataFrame:
-    if frame.empty:
-        return pd.DataFrame(columns=list(PATIENT_LIST_ZH_HEADERS.values()))
-    renamed = frame.rename(columns=PATIENT_LIST_ZH_HEADERS)
+    working = frame.copy()
+    for column in TREATMENT_DISPLAY_LABELS:
+        if column not in working.columns:
+            working[column] = ""
+    working["treatment_summary"] = working.apply(_treatment_summary_zh, axis=1)
+    for column in TREATMENT_DISPLAY_LABELS:
+        working[column] = working[column].fillna("").astype(str).str.strip().map(
+            lambda value: "有" if value == "Y" else value
+        )
+    renamed = working.rename(columns=PATIENT_LIST_ZH_HEADERS)
     ordered_columns = [
         PATIENT_LIST_ZH_HEADERS[column]
-        for column in PATIENT_LIST_COLUMNS
-        if column in PATIENT_LIST_ZH_HEADERS
+        for column in PATIENT_LIST_ZH_ORDER
+        if PATIENT_LIST_ZH_HEADERS[column] in renamed.columns
     ]
     return renamed[ordered_columns]
 
 
+def _treatment_summary_zh(row: pd.Series) -> str:
+    labels = [
+        label
+        for column, label in TREATMENT_DISPLAY_LABELS.items()
+        if str(row.get(column, "")).strip() == "Y"
+    ]
+    return "、".join(labels)
+
+
+def _localize_review_frame(frame: pd.DataFrame, report_key: str) -> pd.DataFrame:
+    localized = frame.copy()
+    if report_key == "stage_review":
+        if "review_reason" in localized.columns:
+            localized["review_reason"] = localized["review_reason"].map(
+                lambda value: STAGE_REVIEW_REASON_ZH.get(str(value).strip(), str(value).strip())
+            )
+        if "final_stage_source" in localized.columns:
+            localized["final_stage_source"] = localized["final_stage_source"].map(
+                lambda value: STAGE_SOURCE_ZH.get(str(value).strip(), str(value).strip())
+            )
+    return localized.rename(columns=REVIEW_HEADER_MAPS[report_key])
+
+
+def _build_pending_stage_review_output(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty or "review_reason" not in frame.columns:
+        return frame.copy()
+    reason = frame["review_reason"].fillna("").astype(str).str.strip()
+    final_stage = frame.get(
+        "final_stage", pd.Series("", index=frame.index, dtype="object")
+    ).fillna("").astype(str).str.strip()
+    resolved_reasons = {"mapped_from_tnm", "reported_stage"}
+    return frame[(final_stage == "") & ~reason.isin(resolved_reasons)].copy()
+
+
+def _build_export_metrics(
+    standardized_frame: pd.DataFrame,
+    patient_list_frame: pd.DataFrame,
+    unmatched_icd10_frame: pd.DataFrame,
+    stage_review_frame: pd.DataFrame,
+    unmapped_drug_orders_frame: pd.DataFrame,
+    unmapped_treatment_orders_frame: pd.DataFrame,
+) -> dict[str, int]:
+    mrn = patient_list_frame.get(
+        "medical_record_no", pd.Series("", index=patient_list_frame.index, dtype="object")
+    ).fillna("").astype(str).str.strip()
+    non_blank_mrn = mrn[mrn != ""]
+    return {
+        "patient_list_rows": len(patient_list_frame),
+        "unique_mrn_count": int(non_blank_mrn.nunique()),
+        "repeated_mrn_count": int(non_blank_mrn.value_counts().gt(1).sum()),
+        "standardized_rows": len(standardized_frame),
+        "unmatched_icd10_rows": len(unmatched_icd10_frame),
+        "stage_review_rows": len(stage_review_frame),
+        "unmapped_drug_rows": len(unmapped_drug_orders_frame),
+        "unmapped_treatment_rows": len(unmapped_treatment_orders_frame),
+    }
+
+
 def _build_summary_zh(frame: pd.DataFrame) -> pd.DataFrame:
     if frame.empty:
-        return pd.DataFrame(columns=["分類", "項目", "人數"])
+        return pd.DataFrame(columns=["分類", "項目", SUMMARY_COUNT_HEADER])
 
     working = frame.copy()
     if "cancer_type" in working.columns:
@@ -2178,29 +2389,29 @@ def _build_summary_zh(frame: pd.DataFrame) -> pd.DataFrame:
 
 def _build_summary_trend_zh(frame: pd.DataFrame) -> pd.DataFrame:
     if frame.empty or "diagnosis_date" not in frame.columns:
-        return pd.DataFrame(columns=["月份", "分類", "項目", "人數"])
+        return pd.DataFrame(columns=["月份", "分類", "項目", SUMMARY_COUNT_HEADER])
 
     working = frame.copy()
     diagnosis_dates = pd.to_datetime(working["diagnosis_date"].replace("", pd.NA), errors="coerce")
     working["月份"] = diagnosis_dates.dt.strftime("%Y-%m").fillna("")
     working = working[working["月份"] != ""].copy()
     if working.empty:
-        return pd.DataFrame(columns=["月份", "分類", "項目", "人數"])
+        return pd.DataFrame(columns=["月份", "分類", "項目", SUMMARY_COUNT_HEADER])
 
     working["癌別顯示"] = working["cancer_type"].fillna("").astype(str).map(_format_cancer_type_display)
 
     monthly_total = (
         working.groupby("月份")
         .size()
-        .reset_index(name="人數")
-        .assign(分類="診斷月份", 項目="總人數")
+        .reset_index(name=SUMMARY_COUNT_HEADER)
+        .assign(分類="診斷月份", 項目="總表筆數")
     )
 
     monthly_cancer = (
         working[working["癌別顯示"] != ""]
         .groupby(["月份", "癌別顯示"])
         .size()
-        .reset_index(name="人數")
+        .reset_index(name=SUMMARY_COUNT_HEADER)
         .rename(columns={"癌別顯示": "項目"})
         .assign(分類="診斷月份癌別")
     )
@@ -2224,31 +2435,37 @@ def _build_summary_trend_zh(frame: pd.DataFrame) -> pd.DataFrame:
             if count == 0:
                 continue
             treatment_rows.append(
-                {"月份": month, "分類": "診斷月份治療別", "項目": label, "人數": int(count)}
+                {
+                    "月份": month,
+                    "分類": "診斷月份治療別",
+                    "項目": label,
+                    SUMMARY_COUNT_HEADER: int(count),
+                }
             )
 
     monthly_treatment = pd.DataFrame(
-        treatment_rows, columns=["月份", "分類", "項目", "人數"]
+        treatment_rows, columns=["月份", "分類", "項目", SUMMARY_COUNT_HEADER]
     )
 
     result = pd.concat([monthly_total, monthly_cancer, monthly_treatment], ignore_index=True)
-    return result[["月份", "分類", "項目", "人數"]].sort_values(
-        by=["月份", "分類", "人數", "項目"], ascending=[True, True, False, True]
+    return result[["月份", "分類", "項目", SUMMARY_COUNT_HEADER]].sort_values(
+        by=["月份", "分類", SUMMARY_COUNT_HEADER, "項目"],
+        ascending=[True, True, False, True],
     ).reset_index(drop=True)
 
 
 def _build_count_section(frame: pd.DataFrame, section_name: str, column: str) -> pd.DataFrame:
     if column not in frame.columns:
-        return pd.DataFrame(columns=["分類", "項目", "人數"])
+        return pd.DataFrame(columns=["分類", "項目", SUMMARY_COUNT_HEADER])
     working = frame[column].fillna("").astype(str).str.strip()
     working = working[working != ""]
     if working.empty:
-        return pd.DataFrame(columns=["分類", "項目", "人數"])
+        return pd.DataFrame(columns=["分類", "項目", SUMMARY_COUNT_HEADER])
     counts = (
         working.value_counts()
         .rename_axis("項目")
-        .reset_index(name="人數")
-        .sort_values(by=["人數", "項目"], ascending=[False, True])
+        .reset_index(name=SUMMARY_COUNT_HEADER)
+        .sort_values(by=[SUMMARY_COUNT_HEADER, "項目"], ascending=[False, True])
         .reset_index(drop=True)
     )
     counts.insert(0, "分類", section_name)
@@ -2263,7 +2480,9 @@ def _build_yesno_section(
         if column not in frame.columns:
             continue
         count = (frame[column].fillna("").astype(str).str.strip() == "Y").sum()
-        rows.append({"分類": section_name, "項目": label, "人數": int(count)})
+        rows.append(
+            {"分類": section_name, "項目": label, SUMMARY_COUNT_HEADER: int(count)}
+        )
     return pd.DataFrame(rows)
 
 

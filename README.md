@@ -13,7 +13,8 @@
 3. 把要清洗的 Excel 報表放進 `raw/`。
 4. 按兩下 `清洗報表.bat`。
 5. 到 `output/cleaned_reports.xlsx` 查看結果。
-6. 如果想先檢查電腦能不能跑，按兩下 `檢查環境.bat`。
+6. 打開後先看第一個分頁 `使用說明`，日常總表是第二個分頁 `病人總表`。
+7. 如果想先檢查電腦能不能跑，按兩下 `檢查環境.bat`。
 
 ## Windows 批次檔
 
@@ -43,17 +44,14 @@ python -m report_cleaner.cli apply-mapping-review
 
 `output/cleaned_reports.xlsx` 會包含：
 
-- `cleaned_data`
-- `standardized_data`
-- `patient_master`
-- `patient_list`
-- `patient_list_zh`
-- `summary_zh`
-- `summary_trend_zh`
-- `unmatched_icd10`
-- `stage_review`
-- `unmapped_drug_orders`
-- `unmapped_treatment_orders`
+- `使用說明`：第一頁，說明總表位置、各分頁用途與本次品質計數。
+- `病人總表`：日常主要查閱表，常用欄位在前方，含治療摘要。
+- `統計摘要`：依癌別、期別、性別、年齡與治療彙總。
+- `月趨勢`：依診斷月份整理個案與治療趨勢。
+- `ICD10待確認`、`TNM期別待確認`、`藥物待確認`、`治療醫令待確認`：需要人工檢視的資料。
+- `cleaned_data`、`standardized_data`、`patient_master`、`patient_list`、`stage_review`：工程與稽核底稿，預設隱藏，資料仍完整保留。
+
+`病人總表` 的治療欄顯示「有」，代表來源資料中找到該治療紀錄；空白只代表目前來源沒有找到，不等於確認未接受治療。
 
 ## Mapping Review 流程
 
