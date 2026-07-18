@@ -29,6 +29,8 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
                 age_at_diagnosis="65",
                 diagnosis_date="2025-02-03",
                 cancer_type="BR_乳癌",
+                cancer_summary="乳癌 (BR)",
+                tnm_summary="乳癌 (BR)：Stage IIA",
                 diagnosis_text="乳房惡性腫瘤",
                 final_stage="IIA",
                 doctor="測試醫師",
@@ -48,6 +50,8 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
                 age_at_diagnosis="65",
                 diagnosis_date="2025-02-03",
                 cancer_type="BR_乳癌",
+                cancer_summary="乳癌 (BR)",
+                tnm_summary="乳癌 (BR)：Stage IIA",
                 diagnosis_text="乳房惡性腫瘤",
                 final_stage="IIA",
                 doctor="測試醫師",
@@ -60,6 +64,9 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
         report_name="測試來源",
         source_file="sample.xlsx",
         record_key="R1",
+        order_category="drug",
+        order_code="TESTDRUG",
+        order_name="測試藥物",
     )
     empty = pd.DataFrame()
     stage_review = pd.DataFrame(
@@ -90,29 +97,49 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
     )
 
     workbook = load_workbook(output, data_only=False)
-    assert workbook.sheetnames[:4] == ["使用說明", "病人總表", "統計摘要", "月趨勢"]
+    assert workbook.sheetnames[:6] == [
+        "使用說明",
+        "病人總表",
+        "治療藥物明細",
+        "抽查清單",
+        "統計摘要",
+        "月趨勢",
+    ]
     assert workbook.active.title == "使用說明"
     assert workbook["使用說明"]["A1"].value == "癌症報表清洗結果"
+    assert workbook["使用說明"]["B12"].value == 1
     assert workbook["使用說明"]["B13"].value == 1
+    assert workbook["使用說明"]["B15"].value == 1
 
     patient_sheet = workbook["病人總表"]
     assert patient_sheet.freeze_panes == "E2"
-    assert patient_sheet.auto_filter.ref == f"A1:AK{patient_sheet.max_row}"
+    assert patient_sheet.auto_filter.ref.endswith(str(patient_sheet.max_row))
     headers = [cell.value for cell in patient_sheet[1]]
     assert headers[:10] == [
         "病患姓名",
         "病歷號",
         "性別",
         "年齡",
-        "癌別",
+        "癌別摘要",
         "診斷名稱",
         "診斷日",
-        "最終期別",
+        "TNM／期別摘要",
         "治療摘要",
-        "主責醫師",
+        "藥物摘要",
     ]
     assert patient_sheet["I2"].value == "化療、手術"
-    assert patient_sheet["P2"].value == "有"
+    header_positions = {cell.value: cell.column for cell in patient_sheet[1]}
+    assert patient_sheet.cell(2, header_positions["化學治療"]).value == "有"
+
+    detail_sheet = workbook["治療藥物明細"]
+    assert detail_sheet.freeze_panes == "E2"
+    assert detail_sheet["G2"].value == "TESTDRUG"
+    assert detail_sheet["H2"].value == "測試藥物"
+
+    qa_sheet = workbook["抽查清單"]
+    assert qa_sheet.freeze_panes == "E2"
+    assert qa_sheet["M1"].value == "人工確認結果"
+    assert qa_sheet.data_validations.count == 1
 
     assert workbook["TNM期別待確認"]["G1"].value == "待確認原因"
     assert workbook["TNM期別待確認"]["G2"].value == "有 TNM，缺最終期別"

@@ -4,12 +4,15 @@ from datetime import datetime
 from typing import Mapping
 
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
 SHEET_GUIDE = "使用說明"
 SHEET_PATIENT_LIST = "病人總表"
+SHEET_TREATMENT_DETAIL = "治療藥物明細"
+SHEET_QA_SAMPLE = "抽查清單"
 SHEET_SUMMARY = "統計摘要"
 SHEET_TREND = "月趨勢"
 SHEET_UNMATCHED_ICD10 = "ICD10待確認"
@@ -19,6 +22,8 @@ SHEET_UNMAPPED_TREATMENTS = "治療醫令待確認"
 
 VISIBLE_DATA_SHEETS = (
     SHEET_PATIENT_LIST,
+    SHEET_TREATMENT_DETAIL,
+    SHEET_QA_SAMPLE,
     SHEET_SUMMARY,
     SHEET_TREND,
     SHEET_UNMATCHED_ICD10,
@@ -104,6 +109,8 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         ("不同病歷號數", "unique_mrn_count"),
         ("同病歷號出現多列", "repeated_mrn_count"),
         ("標準化明細筆數", "standardized_rows"),
+        ("治療藥物明細筆數", "treatment_detail_rows"),
+        ("抽查清單筆數", "qa_sample_rows"),
         ("ICD10 待確認", "unmatched_icd10_rows"),
         ("TNM／期別待確認", "stage_review_rows"),
         ("未對應藥物", "unmapped_drug_rows"),
@@ -119,7 +126,7 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         for column in (1, 2):
             worksheet.cell(row=row_index, column=column).border = Border(bottom=THIN_GRAY)
 
-    start_row = 18
+    start_row = 20
     worksheet.cell(row=start_row, column=1, value="工作表")
     worksheet.cell(row=start_row, column=2, value="用途")
     worksheet.cell(row=start_row, column=3, value="何時使用")
@@ -130,6 +137,8 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
 
     sheet_guide = [
         (SHEET_PATIENT_LIST, "主要總表，常用欄位在前方", "平常查病人、癌別、期別與治療"),
+        (SHEET_TREATMENT_DETAIL, "每筆藥物、手術、放療與其他治療紀錄", "查治療日期、醫令碼與藥物名稱"),
+        (SHEET_QA_SAMPLE, "自動挑選 30 位高風險或高資訊量病人", "與院內系統逐筆核對"),
         (SHEET_SUMMARY, "依癌別、期別、性別、年齡與治療彙總", "看整體分布"),
         (SHEET_TREND, "依診斷月份整理趨勢", "看月份變化"),
         (SHEET_UNMATCHED_ICD10, "尚未對應癌別的 ICD10", "更新 ICD10 mapping 前"),
@@ -158,7 +167,7 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
     notes = [
         "「有」表示來源資料中找到該治療紀錄。",
         "治療欄空白表示來源資料未找到紀錄，不等於確認未接受治療。",
-        "同一病歷號出現多列，可能是多癌別／多個案，也可能需要進一步合併確認。",
+        "病人總表以病歷號優先合併；多癌別、多個案與多次治療會保留在摘要及明細。",
         "此檔為資料整理結果，仍需由醫療端確認，不應單獨作為診療判定。",
     ]
     for offset, note in enumerate(notes, start=1):
@@ -186,7 +195,7 @@ def _format_data_sheet(worksheet: Worksheet) -> None:
 
     worksheet.sheet_view.showGridLines = False
     worksheet.sheet_view.zoomScale = 85 if worksheet.max_column > 18 else 100
-    worksheet.freeze_panes = "E2" if worksheet.title == SHEET_PATIENT_LIST else "A2"
+    worksheet.freeze_panes = "E2" if worksheet.title in {SHEET_PATIENT_LIST, SHEET_TREATMENT_DETAIL, SHEET_QA_SAMPLE} else "A2"
     worksheet.sheet_properties.tabColor = GOLD if is_review else ("7F8C8D" if is_technical else BLUE)
     worksheet.row_dimensions[1].height = 32
 
@@ -199,6 +208,15 @@ def _format_data_sheet(worksheet: Worksheet) -> None:
     if worksheet.max_row >= 1 and worksheet.max_column >= 1:
         last_column = get_column_letter(worksheet.max_column)
         worksheet.auto_filter.ref = f"A1:{last_column}{worksheet.max_row}"
+
+    if worksheet.title == SHEET_QA_SAMPLE and worksheet.max_row >= 2:
+        validation = DataValidation(
+            type="list", formula1='"正確,需修正,待確認"', allow_blank=True
+        )
+        validation.error = "請選擇：正確、需修正或待確認"
+        validation.errorTitle = "抽查結果"
+        worksheet.add_data_validation(validation)
+        validation.add(f"M2:M{worksheet.max_row}")
 
     for column_index in range(1, worksheet.max_column + 1):
         header = str(worksheet.cell(row=1, column=column_index).value or "")

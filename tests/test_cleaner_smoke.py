@@ -3,13 +3,20 @@ import pandas as pd
 from report_cleaner.cleaner import (
     _apply_manual_icd10_mapping,
     _build_stage_review_report,
+    _build_patient_master,
+    _build_quality_review_sample_zh,
+    _build_standardized_frame,
+    _build_treatment_detail_zh,
     _build_unmapped_drug_orders_report,
     _build_unmapped_treatment_orders_report,
     _build_unmatched_icd10_report,
     _classify_drug_treatment,
     _classify_order_treatment,
+    _collect_source_files,
+    _content_fingerprint,
     _load_drug_treatment_mapping,
     _load_order_treatment_mapping,
+    _load_tnm_stage_mapping,
     _standardize_guideline_drug,
     _standardize_inpatient,
     _standardize_order_detail,
@@ -152,6 +159,9 @@ def test_stage_review_report_adds_review_reason() -> None:
 def test_standardize_guideline_drug_classifies_drug_treatments() -> None:
     frame = pd.DataFrame(
         {
+            "姓名": ["甲", "乙", "丙", "丁"],
+            "性別": ["男", "女", "女", "男"],
+            "年齡": ["60", "61", "62", "63"],
             "開單日期": ["20250101", "20250102", "20250103", "20250104"],
             "病歷號": ["001", "002", "003", "004"],
             "主治醫師": ["A", "B", "C", "D"],
@@ -174,6 +184,10 @@ def test_standardize_guideline_drug_classifies_drug_treatments() -> None:
     assert standardized.loc[2, "hormone_therapy"] == "Y"
     assert standardized.loc[3, "targeted_therapy"] == "Y"
     assert standardized.loc[3, "order_name"] == "Tepotinib 225mg"
+    assert standardized.loc[0, "patient_name"] == "甲"
+    assert standardized.loc[0, "sex"] == "男"
+    assert standardized.loc[0, "age_at_diagnosis"] == "60"
+    assert standardized.loc[0, "order_category"] == "drug"
 
 
 def test_drug_treatment_mapping_rules_can_classify_new_drug_names() -> None:
@@ -266,6 +280,9 @@ def test_standardize_treatment_plan_reads_case_list_treatment_columns() -> None:
             "賀爾蒙填寫日期": ["1150401"],
             "標靶填寫日期": ["1150501"],
             "手術填寫日期": ["1150601"],
+            "最近追蹤日": ["1150701"],
+            "組合": ["cT3N1M0"],
+            "期別": ["IIIB"],
         }
     )
 
@@ -277,6 +294,151 @@ def test_standardize_treatment_plan_reads_case_list_treatment_columns() -> None:
     assert standardized.loc[0, "hormone_therapy"] == "Y"
     assert standardized.loc[0, "targeted_therapy"] == "Y"
     assert standardized.loc[0, "surgery"] == "Y"
+    assert standardized.loc[0, "last_followup_date"] == "1150701"
+    assert standardized.loc[0, "clinical_tnm"] == "cT3N1M0"
+    assert standardized.loc[0, "final_stage"] == "IIIB"
+
+
+def test_case_list_filename_routes_to_treatment_plan() -> None:
+    frame = pd.DataFrame(
+        {"病歷號": ["001"], "個案編號": ["CASE1"], "最近追蹤日": ["20250102"]}
+    )
+
+    standardized = _build_standardized_frame(
+        frame, "11301-11506收案名單", "case.xls", "", ""
+    )
+
+    assert standardized.loc[0, "medical_record_no"] == "001"
+    assert standardized.loc[0, "case_id"] == "CASE1"
+    assert standardized.loc[0, "last_followup_date"] == "20250102"
+
+
+def test_patient_master_merges_case_tnm_drug_and_treatment_by_mrn() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "medical_record_no": "001",
+                "patient_name": "測試個案",
+                "case_id": "CASE1",
+                "cancer_type": "BR_乳癌",
+                "clinical_tnm": "cT2N0M0",
+                "final_stage": "IIA",
+                "diagnosis_date": "2025-01-01",
+                "last_followup_date": "2025-05-01",
+                "report_date": "2025-05-01",
+                "surgery": "Y",
+                "surgery_date": "2025-02-01",
+            },
+            {
+                "medical_record_no": "001",
+                "patient_name": "測試個案",
+                "order_category": "drug",
+                "order_name": "Examplemab 100mg",
+                "targeted_therapy": "Y",
+                "targeted_therapy_date": "2025-06-01",
+                "report_date": "2025-06-01",
+            },
+        ]
+    ).fillna("")
+
+    master = _build_patient_master(frame)
+
+    assert len(master) == 1
+    assert master.loc[0, "patient_key"] == "MRN:001"
+    assert master.loc[0, "surgery"] == "Y"
+    assert master.loc[0, "targeted_therapy"] == "Y"
+    assert "cT2N0M0" in master.loc[0, "tnm_summary"]
+    assert master.loc[0, "medication_count"] == "1"
+    assert master.loc[0, "medication_summary"] == "Examplemab 100mg"
+    assert master.loc[0, "latest_activity_date"] == "2025-06-01"
+
+
+def test_source_collection_skips_reference_workbooks(tmp_path) -> None:
+    (tmp_path / "病人報表.xlsx").touch()
+    (tmp_path / "八大癌手術醫令碼-新.xlsx").touch()
+    (tmp_path / "常用化療藥物對照表.xlsx").touch()
+
+    files = _collect_source_files(tmp_path)
+
+    assert [path.name for path in files] == ["病人報表.xlsx"]
+
+
+def test_content_fingerprint_ignores_row_and_column_order() -> None:
+    first = pd.DataFrame({"A": ["1", "2"], "B": ["x", "y"]})
+    second = pd.DataFrame({"B": ["y", "x"], "A": ["2", "1"]})
+
+    assert _content_fingerprint(first) == _content_fingerprint(second)
+
+
+def test_treatment_detail_splits_plan_treatments_by_date() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "medical_record_no": "001",
+                "chemotherapy": "Y",
+                "chemotherapy_date": "2025-02-01",
+                "surgery": "Y",
+                "surgery_date": "2025-03-01",
+                "report_name": "治療計畫",
+            }
+        ]
+    )
+
+    detail = _build_treatment_detail_zh(frame)
+
+    assert detail[["日期", "治療類型"]].to_dict("records") == [
+        {"日期": "2025-02-01", "治療類型": "化療"},
+        {"日期": "2025-03-01", "治療類型": "手術"},
+    ]
+
+
+def test_quality_review_sample_prioritizes_multiple_cases_and_pending_tnm() -> None:
+    patient_list = pd.DataFrame(
+        [
+            {
+                "patient_key": "MRN:001",
+                "medical_record_no": "001",
+                "patient_name": "甲",
+                "cancer_case_count": "2",
+                "cancer_summary": "乳癌 (BR) | 肺癌 (LC)",
+                "medication_count": "1",
+                "chemotherapy": "Y",
+            },
+            {
+                "patient_key": "MRN:002",
+                "medical_record_no": "002",
+                "patient_name": "乙",
+                "cancer_case_count": "1",
+                "cancer_summary": "肺癌 (LC)",
+                "medication_count": "0",
+            },
+        ]
+    ).fillna("")
+    standardized = pd.DataFrame(
+        [
+            {
+                "patient_key": "MRN:002",
+                "medical_record_no": "002",
+                "clinical_tnm": "cT2N0M0",
+                "final_stage": "",
+            }
+        ]
+    ).fillna("")
+
+    sample = _build_quality_review_sample_zh(patient_list, standardized, sample_size=2)
+
+    assert len(sample) == 2
+    assert "多癌症個案" in sample.loc[sample["病歷號"] == "001", "抽查原因"].iloc[0]
+    assert "TNM／期別待確認" in sample.loc[sample["病歷號"] == "002", "抽查原因"].iloc[0]
+    assert sample["人工確認結果"].eq("").all()
+
+
+def test_verified_ajcc8_broad_stage_rules_are_loaded() -> None:
+    mapping = _load_tnm_stage_mapping(build_paths().tnm_stage_mapping_file)
+
+    assert mapping[("CR_結腸直腸癌", "cT3N1M0")] == "3"
+    assert mapping[("LC_肺癌", "cT4N3M1c")] == "4"
+    assert mapping[("UB_膀胱癌", "cTaN0M0")] == "0"
 
 
 def test_standardize_order_detail_classifies_radiation_planning() -> None:

@@ -2,3 +2,16 @@
 BR_乳癌,pT1ccN0M0,1,example
 BR_乳癌,cT1ccN0M0,1,example
 CR_結腸直腸癌,cT3N0M0,2,example
+CR_結腸直腸癌,cT3N1M0,3,AJCC8 broad stage; NCI verified; reported consensus n=6
+CR_結腸直腸癌,cT3N1M1,4,AJCC8 broad stage; NCI verified; reported consensus n=4
+CR_結腸直腸癌,pT3N1aM0,3,AJCC8 broad stage; NCI verified; reported consensus n=8
+CR_結腸直腸癌,pT3N1bM0,3,AJCC8 broad stage; NCI verified; reported consensus n=7
+HC_肝癌,cT4N0M1,4,AJCC8 stage IVB broad group; NCI verified; reported consensus n=3
+LC_肺癌,cT4N2M1,4,AJCC8 stage IV broad group; NCI verified; reported consensus n=4
+LC_肺癌,cT4N2M1a,4,AJCC8 stage IVA broad group; NCI verified; reported consensus n=3
+LC_肺癌,cT4N3M1,4,AJCC8 stage IV broad group; NCI verified; reported consensus n=5
+LC_肺癌,cT4N3M1a,4,AJCC8 stage IVA broad group; NCI verified; reported consensus n=11
+LC_肺癌,cT4N3M1c,4,AJCC8 stage IVB broad group; NCI verified; reported consensus n=9
+LC_肺癌,pT1miN0M0,1,AJCC8 stage IA1 broad group; NCI verified; reported consensus n=4
+OC_口腔癌,cT2N0M0,2,AJCC8 stage II broad group; NCI verified; reported consensus n=7
+UB_膀胱癌,cTaN0M0,0,AJCC8 stage 0a broad group; NCI verified; reported consensus n=6
