@@ -47,5 +47,5 @@ def test_cli_check_env_command_runs(capsys) -> None:
     cli.main(["check-env"])
 
     captured = capsys.readouterr()
-    assert "Environment check:" in captured.out
-    assert "Result: environment is ready." in captured.out
+    assert "環境檢查：" in captured.out
+    assert "結果：環境已準備完成。" in captured.out

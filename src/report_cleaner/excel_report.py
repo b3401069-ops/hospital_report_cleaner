@@ -141,10 +141,10 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         (SHEET_QA_SAMPLE, "自動挑選 30 位高風險或高資訊量病人", "與院內系統逐筆核對"),
         (SHEET_SUMMARY, "依癌別、期別、性別、年齡與治療彙總", "看整體分布"),
         (SHEET_TREND, "依診斷月份整理趨勢", "看月份變化"),
-        (SHEET_UNMATCHED_ICD10, "尚未對應癌別的 ICD10", "更新 ICD10 mapping 前"),
+        (SHEET_UNMATCHED_ICD10, "尚未對應癌別的 ICD10", "更新 ICD10 對照規則前"),
         (SHEET_STAGE_REVIEW, "TNM 與最終期別需確認的組合", "醫療端確認期別時"),
-        (SHEET_UNMAPPED_DRUGS, "尚未分類的新藥物醫令", "更新藥物 mapping 前"),
-        (SHEET_UNMAPPED_TREATMENTS, "尚未分類的手術／放療等醫令", "更新治療 mapping 前"),
+        (SHEET_UNMAPPED_DRUGS, "尚未分類的新藥物醫令", "更新藥物對照規則前"),
+        (SHEET_UNMAPPED_TREATMENTS, "尚未分類的手術／放療等醫令", "更新治療對照規則前"),
     ]
     for row_index, (sheet_name, purpose, timing) in enumerate(sheet_guide, start=start_row + 1):
         worksheet.cell(row=row_index, column=1, value=sheet_name)

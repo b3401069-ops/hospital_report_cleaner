@@ -215,10 +215,10 @@ PATIENT_LIST_ZH_HEADERS = {
     "radiation_therapy_date": "放射治療日期",
     "surgery": "手術",
     "surgery_date": "手術日期",
-    "tace": "TACE",
-    "tace_date": "TACE日期",
-    "rfa": "RFA",
-    "rfa_date": "RFA日期",
+    "tace": "肝動脈栓塞（TACE）",
+    "tace_date": "肝動脈栓塞日期",
+    "rfa": "射頻燒灼（RFA）",
+    "rfa_date": "射頻燒灼日期",
 }
 PATIENT_LIST_ZH_ORDER = [
     "patient_name",
@@ -271,8 +271,8 @@ TREATMENT_DISPLAY_LABELS = {
     "hormone_therapy": "抗荷爾蒙",
     "radiation_therapy": "放療",
     "surgery": "手術",
-    "tace": "TACE",
-    "rfa": "RFA",
+    "tace": "肝動脈栓塞（TACE）",
+    "rfa": "射頻燒灼（RFA）",
 }
 REVIEW_HEADER_MAPS = {
     "unmatched_icd10": {
@@ -319,14 +319,14 @@ REVIEW_HEADER_MAPS = {
     },
 }
 STAGE_REVIEW_REASON_ZH = {
-    "mapped_from_tnm": "已由 TNM mapping 對應",
+    "mapped_from_tnm": "已由 TNM 對照規則判定",
     "reported_stage": "來源報表已有期別",
     "missing_final_stage_with_non_specific_tnm": "TNM 不完整，缺最終期別",
     "missing_final_stage_with_unknown_tnm": "TNM 含 X，缺最終期別",
     "missing_final_stage": "有 TNM，缺最終期別",
 }
 STAGE_SOURCE_ZH = {
-    "tnm_mapping": "TNM mapping",
+    "tnm_mapping": "TNM 對照規則",
     "reported": "來源報表",
 }
 SUMMARY_COUNT_HEADER = "個案筆數"
@@ -373,7 +373,7 @@ def run_cleaning(
 ]:
     files = _collect_source_files(paths.raw_dir)
     if not files:
-        raise FileNotFoundError("No source reports were found in raw/.")
+        raise FileNotFoundError("raw/ 資料夾內找不到可處理的來源報表。")
 
     column_mapping = _load_column_mapping(paths.column_mapping_file)
     value_mapping = _load_value_mapping(paths.value_mapping_file)
@@ -395,8 +395,8 @@ def run_cleaning(
         fingerprint = _content_fingerprint(frame)
         if fingerprint in seen_fingerprints:
             warnings.warn(
-                f"Skipped duplicate source content: {source_file.name} duplicates "
-                f"{seen_fingerprints[fingerprint]}",
+                f"已略過內容重複的來源檔：{source_file.name}；"
+                f"內容與 {seen_fingerprints[fingerprint]} 相同。",
                 stacklevel=2,
             )
             continue
@@ -2628,6 +2628,17 @@ def _build_quality_review_sample_zh(
 
 def _localize_review_frame(frame: pd.DataFrame, report_key: str) -> pd.DataFrame:
     localized = frame.copy()
+    if "cancer_type" in localized.columns:
+        localized["cancer_type"] = localized["cancer_type"].map(
+            lambda value: _format_cancer_type_display(str(value).strip())
+        )
+    if report_key == "unmatched_icd10" and "notes" in localized.columns:
+        localized["notes"] = localized["notes"].map(
+            lambda value: {
+                "secondary_or_metastatic_code_needs_primary_site_review":
+                    "續發或轉移性腫瘤代碼，需確認原發部位",
+            }.get(str(value).strip(), str(value).strip())
+        )
     if report_key == "stage_review":
         if "review_reason" in localized.columns:
             localized["review_reason"] = localized["review_reason"].map(
@@ -2707,8 +2718,8 @@ def _build_summary_zh(frame: pd.DataFrame) -> pd.DataFrame:
         "抗荷爾蒙治療": "hormone_therapy",
         "放射治療": "radiation_therapy",
         "手術": "surgery",
-        "TACE": "tace",
-        "RFA": "rfa",
+        "肝動脈栓塞（TACE）": "tace",
+        "射頻燒灼（RFA）": "rfa",
     }))
 
     summary = pd.concat(sections, ignore_index=True)
@@ -2760,8 +2771,8 @@ def _build_summary_trend_zh(frame: pd.DataFrame) -> pd.DataFrame:
         "抗荷爾蒙治療": "hormone_therapy",
         "放射治療": "radiation_therapy",
         "手術": "surgery",
-        "TACE": "tace",
-        "RFA": "rfa",
+        "肝動脈栓塞（TACE）": "tace",
+        "射頻燒灼（RFA）": "rfa",
     }
     for month, month_group in working.groupby("月份", sort=True):
         for label, column in treatment_columns.items():
@@ -2846,10 +2857,10 @@ def _format_cancer_type_display(value: str) -> str:
     if not text:
         return ""
     if text in SPECIAL_CANCER_TYPE_LABELS:
-        return f"{SPECIAL_CANCER_TYPE_LABELS[text]} ({text})"
+        return f"{SPECIAL_CANCER_TYPE_LABELS[text]}（{text}）"
     if "_" in text:
         code, label = text.split("_", 1)
-        return f"{label} ({code})"
+        return f"{label}（{code}）"
     return text
 
 
@@ -3082,7 +3093,7 @@ def _build_patient_tnm_summary(group: pd.DataFrame) -> str:
         if not (clinical or pathologic or stage):
             continue
         cancer = _format_cancer_type_display(_safe_cell(group, idx, "cancer_type"))
-        parts = [value for value in (clinical, pathologic, f"Stage {stage}" if stage else "") if value]
+        parts = [value for value in (clinical, pathologic, f"期別 {stage}" if stage else "") if value]
         summary = f"{cancer}：{' / '.join(parts)}" if cancer else " / ".join(parts)
         if summary not in seen:
             seen.add(summary)

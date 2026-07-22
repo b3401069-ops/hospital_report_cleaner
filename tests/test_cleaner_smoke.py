@@ -348,6 +348,8 @@ def test_patient_master_merges_case_tnm_drug_and_treatment_by_mrn() -> None:
     assert master.loc[0, "surgery"] == "Y"
     assert master.loc[0, "targeted_therapy"] == "Y"
     assert "cT2N0M0" in master.loc[0, "tnm_summary"]
+    assert "期別 IIA" in master.loc[0, "tnm_summary"]
+    assert "Stage" not in master.loc[0, "tnm_summary"]
     assert master.loc[0, "medication_count"] == "1"
     assert master.loc[0, "medication_summary"] == "Examplemab 100mg"
     assert master.loc[0, "latest_activity_date"] == "2025-06-01"
@@ -400,7 +402,7 @@ def test_quality_review_sample_prioritizes_multiple_cases_and_pending_tnm() -> N
                 "medical_record_no": "001",
                 "patient_name": "甲",
                 "cancer_case_count": "2",
-                "cancer_summary": "乳癌 (BR) | 肺癌 (LC)",
+                "cancer_summary": "乳癌（BR） | 肺癌（LC）",
                 "medication_count": "1",
                 "chemotherapy": "Y",
             },
@@ -409,7 +411,7 @@ def test_quality_review_sample_prioritizes_multiple_cases_and_pending_tnm() -> N
                 "medical_record_no": "002",
                 "patient_name": "乙",
                 "cancer_case_count": "1",
-                "cancer_summary": "肺癌 (LC)",
+                "cancer_summary": "肺癌（LC）",
                 "medication_count": "0",
             },
         ]

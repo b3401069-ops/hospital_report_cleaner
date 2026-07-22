@@ -8,8 +8,8 @@ set "COMMAND=%~1"
 if "%COMMAND%"=="" set "COMMAND=clean"
 
 if not exist "src\report_cleaner\cli.py" (
-    echo This batch file must be run from the hospital_report_cleaner folder.
-    echo Expected file was not found: src\report_cleaner\cli.py
+    echo 這個批次檔必須放在 hospital_report_cleaner 專案資料夾內執行。
+    echo 找不到必要檔案：src\report_cleaner\cli.py
     pause
     exit /b 1
 )
@@ -24,29 +24,29 @@ if not defined PYTHON_CMD (
 )
 
 if not defined PYTHON_CMD (
-    echo Python was not found.
-    echo Please install Python 3, then run this batch file again.
-    echo Download: https://www.python.org/downloads/
+    echo 找不到 Python。
+    echo 請先安裝 Python 3，再重新執行這個批次檔。
+    echo 下載網址：https://www.python.org/downloads/
     pause
     exit /b 1
 )
 
-echo Using Python:
+echo 使用的 Python：
 %PYTHON_CMD% -c "import sys; print(sys.executable)"
 if errorlevel 1 (
-    echo Python could not be started.
+    echo Python 無法啟動。
     pause
     exit /b 1
 )
 
 if /I not "%COMMAND%"=="check-env" (
-    echo Checking required Python packages...
+    echo 正在檢查必要的 Python 套件...
     %PYTHON_CMD% -c "import pandas, openpyxl, xlrd, dateutil" >nul 2>nul
     if errorlevel 1 (
-        echo Required packages are missing. Installing from requirements.txt...
+        echo 缺少必要套件，正在依 requirements.txt 安裝...
         %PYTHON_CMD% -m pip install -r requirements.txt
         if errorlevel 1 (
-            echo Package installation failed.
+            echo 套件安裝失敗。
             pause
             exit /b 1
         )
@@ -55,17 +55,23 @@ if /I not "%COMMAND%"=="check-env" (
 
 set "PYTHONPATH=%CD%\src"
 
+set "COMMAND_LABEL=%COMMAND%"
+if /I "%COMMAND%"=="clean" set "COMMAND_LABEL=清洗報表"
+if /I "%COMMAND%"=="export-mapping-review" set "COMMAND_LABEL=匯出待確認規則"
+if /I "%COMMAND%"=="apply-mapping-review" set "COMMAND_LABEL=套用確認規則"
+if /I "%COMMAND%"=="check-env" set "COMMAND_LABEL=檢查環境"
+
 echo.
-echo Running hospital report cleaner command: %COMMAND%
+echo 正在執行：%COMMAND_LABEL%
 echo.
 %PYTHON_CMD% -m report_cleaner.cli %COMMAND%
 set "EXIT_CODE=%ERRORLEVEL%"
 
 echo.
 if "%EXIT_CODE%"=="0" (
-    echo Done.
+    echo 執行完成。
 ) else (
-    echo Failed with exit code %EXIT_CODE%.
+    echo 執行失敗，錯誤代碼：%EXIT_CODE%。
 )
 
 pause

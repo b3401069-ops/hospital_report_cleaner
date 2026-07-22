@@ -5,8 +5,8 @@ setlocal
 cd /d "%~dp0"
 
 if not exist "requirements.txt" (
-    echo This batch file must be run from the hospital_report_cleaner folder.
-    echo Expected file was not found: requirements.txt
+    echo 這個批次檔必須放在 hospital_report_cleaner 專案資料夾內執行。
+    echo 找不到必要檔案：requirements.txt
     pause
     exit /b 1
 )
@@ -21,26 +21,26 @@ if not defined PYTHON_CMD (
 )
 
 if not defined PYTHON_CMD (
-    echo Python was not found.
-    echo Please install Python 3 first, then run this file again.
-    echo Download: https://www.python.org/downloads/
+    echo 找不到 Python。
+    echo 請先安裝 Python 3，再重新執行這個檔案。
+    echo 下載網址：https://www.python.org/downloads/
     pause
     exit /b 1
 )
 
-echo Using Python:
+echo 使用的 Python：
 %PYTHON_CMD% -c "import sys; print(sys.executable)"
 if errorlevel 1 (
-    echo Python could not be started.
+    echo Python 無法啟動。
     pause
     exit /b 1
 )
 
 echo.
-echo Installing or updating required packages...
+echo 正在安裝或更新必要套件...
 %PYTHON_CMD% -m pip install -r requirements.txt
 if errorlevel 1 (
-    echo Package installation failed.
+    echo 套件安裝失敗。
     pause
     exit /b 1
 )
@@ -48,15 +48,15 @@ if errorlevel 1 (
 set "PYTHONPATH=%CD%\src"
 
 echo.
-echo Running environment check...
+echo 正在檢查執行環境...
 %PYTHON_CMD% -m report_cleaner.cli check-env
 set "EXIT_CODE=%ERRORLEVEL%"
 
 echo.
 if "%EXIT_CODE%"=="0" (
-    echo Setup completed.
+    echo 安裝與環境檢查完成。
 ) else (
-    echo Setup finished, but the environment check still has errors.
+    echo 套件已安裝，但環境檢查仍有錯誤。
 )
 
 pause

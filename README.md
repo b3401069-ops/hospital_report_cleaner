@@ -1,6 +1,6 @@
-# Hospital Report Cleaner
+# 醫院癌症報表清洗器
 
-醫院癌症報表清洗器。把 `raw/` 裡多個 Excel 報表整理成 `output/cleaned_reports.xlsx`，並產生標準化資料、病人清單、中文摘要、mapping 待確認清單與 TNM/stage review。
+醫院癌症報表清洗器。把 `raw/` 裡多個 Excel 報表整理成 `output/cleaned_reports.xlsx`，並產生標準化資料、病人清單、中文摘要、對照規則待確認清單與 TNM／期別檢查。
 
 請先看這份短版操作說明：
 
@@ -19,10 +19,10 @@
 ## Windows 批次檔
 
 - `安裝套件.bat`：安裝或更新 Python 套件，完成後執行環境檢查。
-- `檢查環境.bat`：檢查 Python、套件、資料夾、mapping CSV、`output/` 寫入權限。
+- `檢查環境.bat`：檢查 Python、套件、資料夾、對照規則 CSV、`output/` 寫入權限。
 - `清洗報表.bat`：產生 `output/cleaned_reports.xlsx`。
-- `匯出待確認.bat`：產生 `output/pending_*_mapping.csv`，給人工確認新藥物、醫令碼或 TNM stage。
-- `套用確認.bat`：把已確認的 pending mapping 套回 `mapping/*.csv`。
+- `匯出待確認.bat`：產生 `output/pending_*_mapping.csv`，供人工確認新藥物、醫令碼或 TNM 期別。
+- `套用確認.bat`：把已確認的待確認規則套回 `mapping/*.csv`。
 
 如果電腦顯示找不到 Python，請先安裝 Python 3：
 https://www.python.org/downloads/
@@ -57,15 +57,15 @@ python -m report_cleaner.cli apply-mapping-review
 
 同一病人若有多個癌症個案、不同 TNM 或多種藥物，總表會用摘要保留；完整的多次治療與用藥歷程請看 `治療藥物明細`。`最後回診日` 只採來源中明確的追蹤／回診欄位，`最後資料日期` 則包含治療與醫令日期，兩者用途不同。
 
-檔名含 `醫令碼` 或 `對照表` 的 mapping 參考活頁簿會自動略過。內容完全相同的來源報表也只處理一次並顯示警告，避免重複計算；若被略過的檔案原本應有不同資料，請先回頭修正來源檔。
+檔名含 `醫令碼` 或 `對照表` 的對照參考活頁簿會自動略過。內容完全相同的來源報表也只處理一次並顯示警告，避免重複計算；若被略過的檔案原本應有不同資料，請先回頭修正來源檔。
 
 `抽查清單` 的 `人工確認結果` 可選擇「正確、需修正、待確認」。這份清單是品質抽查工具，不會取代醫療端判讀。
 
-已確認的 AJCC8 TNM broad-stage 規則與限制記錄在 [docs/AJCC8規則.md](docs/AJCC8規則.md)。乳癌、攝護腺癌或 TNM 含 `X` 等無法只靠目前欄位安全判定者，不會自動填期別。
+已確認的 AJCC8 TNM 大分期規則與限制記錄在 [docs/AJCC8規則.md](docs/AJCC8規則.md)。乳癌、攝護腺癌或 TNM 含 `X` 等無法只靠目前欄位安全判定者，不會自動填期別。
 
-## Mapping Review 流程
+## 對照規則確認流程
 
-當新報表出現程式還不認識的藥物、治療醫令碼或 TNM/stage 組合時：
+當新報表出現程式還不認識的藥物、治療醫令碼或 TNM／期別組合時：
 
 1. 按 `匯出待確認.bat`。
 2. 打開 `output/pending_drug_treatment_mapping.csv`、`output/pending_order_treatment_mapping.csv`、`output/pending_tnm_stage_mapping.csv`。
@@ -84,7 +84,7 @@ python -m report_cleaner.cli apply-mapping-review
 
 - `raw/`：放原始 Excel 報表，不上傳 GitHub。
 - `mapping/`：欄位與分類規則，可維護、可上傳。
-- `output/`：產生的報表與 pending mapping，不上傳 GitHub。
+- `output/`：產生的報表與待確認對照規則，不上傳 GitHub。
 - `src/report_cleaner/`：清洗程式。
 - `tests/`：自動測試。
 
@@ -95,4 +95,4 @@ $env:PYTHONPATH="src"
 python -m pytest
 ```
 
-目前測試涵蓋欄位對應、ICD10、TNM/stage review、藥物/治療 mapping、CSV 編碼、CLI 匯入與環境檢查。
+目前測試涵蓋欄位對應、ICD10、TNM／期別檢查、藥物／治療對照規則、CSV 編碼、命令列匯入與環境檢查。

@@ -10,18 +10,18 @@
 
 ## 結論
 
-本機版本比 GitHub `main` 更接近目前報表需求。GitHub `main` 的 2026-06-22 修改看似新增很多欄位 mapping 與發佈包，但破壞了專屬解析器讀中文原始欄位的流程，導致 TNM、治療計畫與新醫令報表被大量讀成空白或去重成單筆。
+本機版本比 GitHub `main` 更接近目前報表需求。GitHub `main` 的 2026-06-22 修改看似新增很多欄位對照與發佈包，但破壞了專屬解析器讀中文原始欄位的流程，導致 TNM、治療計畫與新醫令報表被大量讀成空白或去重成單筆。
 
 ## 同一批 raw 的輸出差異
 
 | 指標 | GitHub main | 本機版本 |
 | --- | ---: | ---: |
 | processed files | 12 | 12 |
-| cleaned rows | 5861 | 5861 |
-| standardized rows | 1388 | 4091 |
-| patient master rows | 846 | 971 |
-| unmatched ICD10 rows | 14 | 12 |
-| stage review rows | 0 | 76 |
+| 清洗後資料筆數 | 5861 | 5861 |
+| 標準化資料筆數 | 1388 | 4091 |
+| 病人主檔筆數 | 846 | 971 |
+| ICD10 待確認筆數 | 14 | 12 |
+| TNM／期別檢查筆數 | 0 | 76 |
 
 ## 治療旗標差異
 
@@ -56,14 +56,14 @@ GitHub `patient_master` 的所有治療旗標皆為 0；本機版本可彙整到
 
 ## GitHub main 中不建議直接沿用的部分
 
-- 大量 global `column_mapping.csv`。它會和專屬解析器互相打架。
+- 大量全域 `column_mapping.csv` 規則。它會和專屬解析器互相衝突。
 - `dist_package/` 與 `HospitalReportCleaner.zip` 放在 repo 根目錄。這些是發佈產物，會和原始碼重複，建議改用 GitHub release 或重新產生。
 - `main.py` 與 dist package 的平行入口。若要保留桌面雙擊執行，應讓它薄薄包一層 `report_cleaner.cli`，避免多份邏輯。
 
 ## 建議救援策略
 
 1. 以本機版本為恢復基底，不要直接用 GitHub `main` 覆蓋。
-2. 從 GitHub 只挑文件中有用的操作說明，避開 2026-06-22 的欄位 mapping 和發佈包改動。
+2. 從 GitHub 只挑文件中有用的操作說明，避開 2026-06-22 的欄位對照和發佈包改動。
 3. 接 GitHub 前先重建有效 `.git`，確認 `raw/`、`output/`、`_compare/`、`*.zip` 不進版控。
 4. 下一步優先改善本機的醫令分類：
    - 化療藥物代碼 37038B-37041B 已能被抓到 chemotherapy。

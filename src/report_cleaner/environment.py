@@ -48,7 +48,7 @@ def build_environment_checks(paths: ProjectPaths) -> list[EnvironmentCheck]:
             EnvironmentCheck(
                 name=f"package:{package_name}",
                 status="ok" if importlib.util.find_spec(import_name) else "error",
-                message=f"import {import_name}",
+                message=f"可匯入 {import_name}",
             )
         )
 
@@ -66,7 +66,7 @@ def build_environment_checks(paths: ProjectPaths) -> list[EnvironmentCheck]:
         EnvironmentCheck(
             name="raw_reports",
             status="ok" if excel_files else "warning",
-            message=f"{len(excel_files)} Excel file(s) found in raw/",
+            message=f"raw/ 內有 {len(excel_files)} 份 Excel 報表",
         )
     )
 
@@ -90,25 +90,43 @@ def environment_has_errors(checks: list[EnvironmentCheck]) -> bool:
 
 
 def format_environment_checks(checks: list[EnvironmentCheck]) -> str:
-    lines = ["Environment check:"]
+    lines = ["環境檢查："]
     for check in checks:
-        marker = {"ok": "[OK]", "warning": "[WARN]", "error": "[ERROR]"}.get(
-            check.status, "[INFO]"
+        marker = {"ok": "[正常]", "warning": "[注意]", "error": "[錯誤]"}.get(
+            check.status, "[資訊]"
         )
-        lines.append(f"{marker} {check.name}: {check.message}")
+        lines.append(f"{marker} {_display_check_name(check.name)}：{check.message}")
     if environment_has_errors(checks):
-        lines.append("Result: environment has errors.")
+        lines.append("結果：環境仍有錯誤。")
     else:
-        lines.append("Result: environment is ready.")
+        lines.append("結果：環境已準備完成。")
     return "\n".join(lines)
+
+
+def _display_check_name(name: str) -> str:
+    names = {
+        "python": "Python",
+        "project_root": "專案資料夾",
+        "raw_dir": "原始報表資料夾",
+        "mapping_dir": "對照規則資料夾",
+        "output_dir": "輸出資料夾",
+        "raw_reports": "原始 Excel 報表",
+        "output_writable": "輸出資料夾寫入權限",
+        "gitignore_safety": "病人資料 Git 安全",
+    }
+    if name.startswith("package:"):
+        return f"Python 套件：{name.removeprefix('package:')}"
+    if name.startswith("mapping:"):
+        return f"對照檔：{name.removeprefix('mapping:')}"
+    return names.get(name, name)
 
 
 def _directory_check(name: str, path: Path, *, must_exist: bool) -> EnvironmentCheck:
     if path.exists() and path.is_dir():
         return EnvironmentCheck(name=name, status="ok", message=str(path))
     if must_exist:
-        return EnvironmentCheck(name=name, status="error", message=f"missing: {path}")
-    return EnvironmentCheck(name=name, status="warning", message=f"will be created: {path}")
+        return EnvironmentCheck(name=name, status="error", message=f"缺少：{path}")
+    return EnvironmentCheck(name=name, status="warning", message=f"執行時會建立：{path}")
 
 
 def _find_excel_files(raw_dir: Path) -> list[Path]:
@@ -128,7 +146,7 @@ def _output_writable_check(output_dir: Path) -> EnvironmentCheck:
         return EnvironmentCheck(
             name="output_writable",
             status="error",
-            message=f"cannot write to output/: {exc}",
+            message=f"無法寫入 output/：{exc}",
         )
     return EnvironmentCheck(name="output_writable", status="ok", message=str(output_dir))
 
@@ -138,11 +156,15 @@ def _gitignore_safety_check(gitignore_file: Path) -> EnvironmentCheck:
         return EnvironmentCheck(
             name="gitignore_safety",
             status="warning",
-            message=".gitignore not found",
+            message="找不到 .gitignore",
         )
     text = gitignore_file.read_text(encoding="utf-8", errors="ignore")
     raw_ignored = "raw/*" in text
     output_ignored = "output/*" in text
     status = "ok" if raw_ignored and output_ignored else "warning"
-    message = "raw/ and output/ are ignored" if status == "ok" else "check raw/output ignore rules"
+    message = (
+        "raw/ 與 output/ 已排除在 Git 之外"
+        if status == "ok"
+        else "請檢查 raw/ 與 output/ 的排除規則"
+    )
     return EnvironmentCheck(name="gitignore_safety", status=status, message=message)
