@@ -5,6 +5,7 @@ from report_cleaner.cleaner import (
     _build_stage_review_report,
     _build_patient_master,
     _build_quality_review_sample_zh,
+    _build_summary_trend_zh,
     _build_standardized_frame,
     _build_treatment_detail_zh,
     _build_unmapped_drug_orders_report,
@@ -17,6 +18,7 @@ from report_cleaner.cleaner import (
     _load_drug_treatment_mapping,
     _load_order_treatment_mapping,
     _load_tnm_stage_mapping,
+    _normalize_cancer_type_values,
     _standardize_guideline_drug,
     _standardize_inpatient,
     _standardize_order_detail,
@@ -392,6 +394,80 @@ def test_treatment_detail_splits_plan_treatments_by_date() -> None:
         {"日期": "2025-02-01", "治療類型": "化療"},
         {"日期": "2025-03-01", "治療類型": "手術"},
     ]
+
+
+def test_treatment_detail_excludes_unclassified_orders_and_counts_duplicates() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "medical_record_no": "001",
+                "patient_name": "測試個案",
+                "report_name": "治療報表甲",
+                "report_date": "2025-02-01",
+                "order_code": "DRUG1",
+                "order_name": "測試藥物",
+                "chemotherapy": "Y",
+            },
+            {
+                "medical_record_no": "001",
+                "patient_name": "測試個案",
+                "report_name": "治療報表乙",
+                "report_date": "2025-02-01",
+                "order_code": "DRUG1",
+                "order_name": "測試藥物",
+                "chemotherapy": "Y",
+            },
+            {
+                "medical_record_no": "001",
+                "patient_name": "測試個案",
+                "report_name": "一般醫令",
+                "report_date": "2025-02-02",
+                "order_code": "UNKNOWN",
+                "order_name": "未分類醫令",
+            },
+        ]
+    ).fillna("")
+
+    detail = _build_treatment_detail_zh(frame)
+
+    assert len(detail) == 1
+    assert detail.loc[0, "紀錄筆數"] == 2
+    assert detail.loc[0, "來源報表"] == "治療報表甲 | 治療報表乙"
+
+
+def test_empty_cancer_placeholder_is_treated_as_missing() -> None:
+    frame = pd.DataFrame({"cancer_type": ["_", "BR_乳癌", "  _  "]})
+
+    normalized = _normalize_cancer_type_values(frame)
+
+    assert normalized["cancer_type"].tolist() == ["", "BR_乳癌", ""]
+
+
+def test_monthly_trend_is_one_row_per_month_with_actual_treatment_dates() -> None:
+    patients = pd.DataFrame(
+        {
+            "diagnosis_date": ["2025-01-15", "2025-01-20", "2025-02-01"]
+        }
+    )
+    treatment_detail = pd.DataFrame(
+        {
+            "日期": ["2025-02-03", "2025-02-03", "2025-03-04", "2099-01-01"],
+            "治療類型": ["化療", "化療", "手術", "放療"],
+            "紀錄筆數": [1, 2, 1, 99],
+        }
+    )
+
+    trend = _build_summary_trend_zh(patients, treatment_detail)
+    january = trend[trend["月份"] == "2025-01"].iloc[0]
+    february = trend[trend["月份"] == "2025-02"].iloc[0]
+
+    assert trend["月份"].is_unique
+    assert january["新診斷人數"] == 2
+    assert february["新診斷人數"] == 1
+    assert february["治療事件數"] == 3
+    assert february["化療"] == 3
+    assert trend["月份"].max() <= pd.Timestamp.today().strftime("%Y-%m")
+    assert 99 not in trend["放療"].tolist()
 
 
 def test_quality_review_sample_prioritizes_multiple_cases_and_pending_tnm() -> None:

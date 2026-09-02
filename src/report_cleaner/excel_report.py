@@ -22,10 +22,10 @@ SHEET_UNMAPPED_TREATMENTS = "治療醫令待確認"
 
 VISIBLE_DATA_SHEETS = (
     SHEET_PATIENT_LIST,
-    SHEET_TREATMENT_DETAIL,
-    SHEET_QA_SAMPLE,
     SHEET_SUMMARY,
     SHEET_TREND,
+    SHEET_TREATMENT_DETAIL,
+    SHEET_QA_SAMPLE,
     SHEET_UNMATCHED_ICD10,
     SHEET_STAGE_REVIEW,
     SHEET_UNMAPPED_DRUGS,
@@ -79,26 +79,24 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
     worksheet.sheet_view.showGridLines = False
     worksheet.sheet_properties.tabColor = TEAL
     worksheet.freeze_panes = "A4"
-    worksheet.merge_cells("A1:H1")
     title = worksheet["A1"]
     title.value = "癌症報表清洗結果"
-    title.fill = PatternFill("solid", fgColor=NAVY)
     title.font = Font(name="Microsoft JhengHei", size=18, bold=True, color=WHITE)
     title.alignment = Alignment(horizontal="left", vertical="center")
+    for column in range(1, 4):
+        worksheet.cell(row=1, column=column).fill = PatternFill("solid", fgColor=NAVY)
     worksheet.row_dimensions[1].height = 34
 
-    worksheet.merge_cells("A2:H2")
     worksheet["A2"] = f"產生時間：{datetime.now():%Y-%m-%d %H:%M}"
     worksheet["A2"].font = Font(name="Microsoft JhengHei", size=10, color="666666")
 
-    worksheet.merge_cells("A4:H4")
     worksheet["A4"] = "從「病人總表」開始閱讀"
-    worksheet["A4"].fill = PatternFill("solid", fgColor=LIGHT_BLUE)
     worksheet["A4"].font = Font(name="Microsoft JhengHei", size=14, bold=True, color=NAVY)
     worksheet["A4"].alignment = Alignment(vertical="center")
+    for column in range(1, 4):
+        worksheet.cell(row=4, column=column).fill = PatternFill("solid", fgColor=LIGHT_BLUE)
     worksheet.row_dimensions[4].height = 28
 
-    worksheet.merge_cells("A5:H5")
     worksheet["A5"] = "病人總表是日常查閱入口；黃色分頁代表需要人工確認。"
     worksheet["A5"].font = Font(name="Microsoft JhengHei", size=11, color=TEXT)
 
@@ -115,6 +113,12 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         ("TNM／期別待確認", "stage_review_rows"),
         ("未對應藥物", "unmapped_drug_rows"),
         ("未對應治療醫令", "unmapped_treatment_rows"),
+        ("癌別待確認", "missing_cancer_count"),
+        ("缺少診斷日", "missing_diagnosis_date_count"),
+        ("缺少回診日", "missing_followup_date_count"),
+        ("診斷日期異常", "invalid_diagnosis_date_count"),
+        ("未來診斷日", "future_diagnosis_date_count"),
+        ("已合併重複治療列", "collapsed_treatment_rows"),
     ]
     for row_index, (label, key) in enumerate(metric_rows, start=8):
         worksheet.cell(row=row_index, column=1, value=label)
@@ -126,7 +130,7 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         for column in (1, 2):
             worksheet.cell(row=row_index, column=column).border = Border(bottom=THIN_GRAY)
 
-    start_row = 20
+    start_row = 8 + len(metric_rows) + 2
     worksheet.cell(row=start_row, column=1, value="工作表")
     worksheet.cell(row=start_row, column=2, value="用途")
     worksheet.cell(row=start_row, column=3, value="何時使用")
@@ -136,11 +140,11 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         cell.alignment = Alignment(vertical="center")
 
     sheet_guide = [
-        (SHEET_PATIENT_LIST, "主要總表，常用欄位在前方", "平常查病人、癌別、期別與治療"),
-        (SHEET_TREATMENT_DETAIL, "每筆藥物、手術、放療與其他治療紀錄", "查治療日期、醫令碼與藥物名稱"),
-        (SHEET_QA_SAMPLE, "自動挑選 30 位高風險或高資訊量病人", "與院內系統逐筆核對"),
+        (SHEET_PATIENT_LIST, "精簡的一人一列日常總表", "平常查病人、癌別、期別、治療與藥物"),
         (SHEET_SUMMARY, "依癌別、期別、性別、年齡與治療彙總", "看整體分布"),
-        (SHEET_TREND, "依診斷月份整理趨勢", "看月份變化"),
+        (SHEET_TREND, "近五年每月新診斷與實際治療事件", "看月份變化與工作量"),
+        (SHEET_TREATMENT_DETAIL, "已分類治療逐筆明細；相同事件會合併計數", "查治療日期、醫令碼與藥物名稱"),
+        (SHEET_QA_SAMPLE, "自動挑選 30 位高風險或高資訊量病人", "與院內系統逐筆核對"),
         (SHEET_UNMATCHED_ICD10, "尚未對應癌別的 ICD10", "更新 ICD10 對照規則前"),
         (SHEET_STAGE_REVIEW, "TNM 與最終期別需確認的組合", "醫療端確認期別時"),
         (SHEET_UNMAPPED_DRUGS, "尚未分類的新藥物醫令", "更新藥物對照規則前"),
@@ -159,7 +163,6 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
                 )
 
     note_row = start_row + len(sheet_guide) + 3
-    worksheet.merge_cells(start_row=note_row, start_column=1, end_row=note_row, end_column=8)
     worksheet.cell(row=note_row, column=1, value="欄位判讀")
     worksheet.cell(row=note_row, column=1).font = Font(
         name="Microsoft JhengHei", size=12, bold=True, color=NAVY
@@ -168,15 +171,11 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         "「有」表示來源資料中找到該治療紀錄。",
         "治療欄空白表示來源資料未找到紀錄，不等於確認未接受治療。",
         "病人總表以病歷號優先合併；多癌別、多個案與多次治療會保留在摘要及明細。",
+        "「紀錄筆數」大於 1，表示相同病人、日期、治療與醫令在來源中重複出現。",
+        "月趨勢只顯示最新資料年度往前五年；較早診斷仍保留在病人總表。",
         "此檔為資料整理結果，仍需由醫療端確認，不應單獨作為診療判定。",
     ]
     for offset, note in enumerate(notes, start=1):
-        worksheet.merge_cells(
-            start_row=note_row + offset,
-            start_column=1,
-            end_row=note_row + offset,
-            end_column=8,
-        )
         worksheet.cell(row=note_row + offset, column=1, value=f"• {note}")
         worksheet.cell(row=note_row + offset, column=1).font = Font(
             name="Microsoft JhengHei", size=10, color=TEXT
@@ -230,7 +229,48 @@ def _format_data_sheet(worksheet: Worksheet) -> None:
             width = max(width, 13)
         if any(keyword in header for keyword in ("名稱", "摘要", "來源報表", "診斷範例", "備註")):
             width = min(max(width, 18), 32)
+        preferred_widths = {
+            "病患姓名": 12,
+            "病歷號": 12,
+            "癌別摘要": 20,
+            "資料提醒": 24,
+            "TNM／期別摘要": 28,
+            "治療摘要": 18,
+            "藥物摘要": 36,
+            "來源報表": 28,
+            "藥物／醫令名稱": 32,
+        }
+        width = preferred_widths.get(header, width)
         worksheet.column_dimensions[get_column_letter(column_index)].width = width
+
+    headers = {str(cell.value or ""): cell.column for cell in worksheet[1]}
+    if worksheet.title == SHEET_PATIENT_LIST and "資料提醒" in headers:
+        alert_column = headers["資料提醒"]
+        for row_index in range(2, worksheet.max_row + 1):
+            cell = worksheet.cell(row=row_index, column=alert_column)
+            if str(cell.value or "").strip():
+                cell.fill = PatternFill("solid", fgColor=LIGHT_GOLD)
+                cell.font = Font(name="Microsoft JhengHei", size=10, color="9C5700")
+
+    if worksheet.title == SHEET_TREATMENT_DETAIL and "紀錄筆數" in headers:
+        count_column = headers["紀錄筆數"]
+        for row_index in range(2, worksheet.max_row + 1):
+            cell = worksheet.cell(row=row_index, column=count_column)
+            cell.number_format = "#,##0"
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            if isinstance(cell.value, (int, float)) and cell.value > 1:
+                cell.fill = PatternFill("solid", fgColor=LIGHT_GOLD)
+
+    if worksheet.title == SHEET_SUMMARY and worksheet.max_row >= 2:
+        previous_category = None
+        for row_index in range(2, worksheet.max_row + 1):
+            category = worksheet.cell(row=row_index, column=1).value
+            if category != previous_category:
+                for column_index in range(1, worksheet.max_column + 1):
+                    worksheet.cell(row=row_index, column=column_index).border = Border(
+                        top=Side(style="medium", color=TEAL)
+                    )
+                previous_category = category
 
     worksheet.page_setup.orientation = "landscape"
     worksheet.page_setup.fitToWidth = 1

@@ -2,6 +2,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
+.codex_pydeps/
+.codex_review/
 
 # Keep real patient reports and generated workbooks out of git.
 raw/*

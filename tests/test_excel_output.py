@@ -100,13 +100,15 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
     assert workbook.sheetnames[:6] == [
         "使用說明",
         "病人總表",
-        "治療藥物明細",
-        "抽查清單",
         "統計摘要",
         "月趨勢",
+        "治療藥物明細",
+        "抽查清單",
     ]
     assert workbook.active.title == "使用說明"
     assert workbook["使用說明"]["A1"].value == "癌症報表清洗結果"
+    assert not workbook["使用說明"].merged_cells.ranges
+    assert workbook["使用說明"]["C1"].fill.fgColor.rgb.endswith("17365D")
     assert workbook["使用說明"]["B12"].value == 1
     assert workbook["使用說明"]["B13"].value == 1
     assert workbook["使用說明"]["B15"].value == 1
@@ -121,20 +123,21 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
         "性別",
         "年齡",
         "癌別摘要",
+        "資料提醒",
         "診斷名稱",
         "診斷日",
         "TNM／期別摘要",
         "治療摘要",
-        "藥物摘要",
     ]
-    assert patient_sheet["I2"].value == "化療、手術"
-    header_positions = {cell.value: cell.column for cell in patient_sheet[1]}
-    assert patient_sheet.cell(2, header_positions["化學治療"]).value == "有"
+    assert patient_sheet["J2"].value == "化療、手術"
+    assert "缺回診日" in patient_sheet["F2"].value
+    assert "化學治療" not in headers
 
     detail_sheet = workbook["治療藥物明細"]
     assert detail_sheet.freeze_panes == "E2"
     assert detail_sheet["G2"].value == "TESTDRUG"
     assert detail_sheet["H2"].value == "測試藥物"
+    assert detail_sheet["I2"].value == 1
 
     qa_sheet = workbook["抽查清單"]
     assert qa_sheet.freeze_panes == "E2"
