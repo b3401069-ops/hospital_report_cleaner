@@ -8,6 +8,7 @@ __pycache__/
 # Keep real patient reports and generated workbooks out of git.
 raw/*
 output/*
+review/
 !raw/.gitkeep
 !output/.gitkeep
 *.xls

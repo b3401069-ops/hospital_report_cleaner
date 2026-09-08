@@ -8,6 +8,10 @@ import warnings
 import pandas as pd
 
 from .config import CSV_ENCODING, ProjectPaths
+from .patient_stage_review import (
+    SHEET as SHEET_PATIENT_STAGE_REVIEW,
+    apply_confirmations, build_queue, review_path, status_by_patient,
+)
 from .excel_report import (
     SHEET_QA_SAMPLE,
     SHEET_PATIENT_LIST,
@@ -192,6 +196,7 @@ PATIENT_LIST_ZH_HEADERS = {
     "clinical_tnm": "臨床分期",
     "pathologic_tnm": "病理分期",
     "final_stage": "最終期別",
+    "stage_status": "期別資料狀態",
     "treatment_summary": "治療摘要",
     "case_category_code": "個案分類代碼",
     "case_category_label": "個案分類",
@@ -227,17 +232,27 @@ PATIENT_LIST_ZH_ORDER = [
     "sex",
     "age_at_diagnosis",
     "cancer_summary",
-    "data_alerts",
-    "diagnosis_text",
-    "diagnosis_date",
-    "tnm_summary",
-    "treatment_summary",
-    "medication_count",
-    "medication_summary",
+    "final_stage",
+    "stage_status",
     "last_followup_date",
     "latest_activity_date",
     "doctor",
     "manager",
+    "surgery",
+    "radiation_therapy",
+    "chemotherapy",
+    "targeted_therapy",
+    "immunotherapy",
+    "hormone_therapy",
+    "tace",
+    "rfa",
+    "medication_count",
+    "data_alerts",
+    "diagnosis_date",
+    "diagnosis_text",
+    "tnm_summary",
+    "treatment_summary",
+    "medication_summary",
     "cancer_case_count",
     "case_category_label",
     "death_date",
@@ -297,6 +312,7 @@ REVIEW_HEADER_MAPS = {
     },
 }
 STAGE_REVIEW_REASON_ZH = {
+    "patient_confirmed": "個案已人工確認",
     "mapped_from_tnm": "已由 TNM 對照規則判定",
     "reported_stage": "來源報表已有期別",
     "missing_final_stage_with_non_specific_tnm": "TNM 不完整，缺最終期別",
@@ -304,6 +320,7 @@ STAGE_REVIEW_REASON_ZH = {
     "missing_final_stage": "有 TNM，缺最終期別",
 }
 STAGE_SOURCE_ZH = {
+    "patient_confirmed": "個案人工確認",
     "tnm_mapping": "TNM 對照規則",
     "reported": "來源報表",
 }
@@ -430,6 +447,7 @@ def run_cleaning(
     standardized = _apply_stage_mapping(standardized, tnm_stage_mapping)
     standardized = _add_record_keys(standardized)
     standardized = _deduplicate_standardized(standardized)
+    standardized = apply_confirmations(standardized, review_path(paths.root))
     standardized = _reorder_columns(standardized, STANDARD_COLUMNS)
     patient_master = _build_patient_master(standardized)
     patient_list = _build_patient_list(patient_master)
@@ -464,12 +482,26 @@ def export_cleaned_report(
 ) -> Path:
     output_file.parent.mkdir(parents=True, exist_ok=True)
     target_file = _resolve_writable_output_path(output_file)
-    patient_list_zh_frame = _build_patient_list_zh(patient_list_frame)
+    staging_data = standardized_frame.copy()
+    staging_data["patient_key"] = _build_patient_key_series(staging_data)
+    patient_stage_queue = build_queue(staging_data)
+    annotated_patients = patient_list_frame.copy()
+    annotated_patients["patient_key"] = _build_patient_key_series(annotated_patients)
+    if "final_stage_source" in patient_master_frame:
+        source_master = patient_master_frame.copy()
+        source_master["patient_key"] = _build_patient_key_series(source_master)
+        sources = source_master.drop_duplicates("patient_key").set_index("patient_key")["final_stage_source"]
+        annotated_patients["final_stage_source"] = annotated_patients["patient_key"].map(sources).fillna("")
+    annotated_patients["stage_status"] = status_by_patient(annotated_patients, patient_stage_queue)
+    patient_list_zh_frame = _build_patient_list_zh(annotated_patients)
     treatment_detail_zh_frame = _build_treatment_detail_zh(standardized_frame)
     qa_sample_zh_frame = _build_quality_review_sample_zh(
         patient_list_frame, standardized_frame
     )
     summary_zh_frame = _build_summary_zh(patient_master_frame)
+    completeness = annotated_patients["stage_status"].value_counts().rename_axis("項目").reset_index(name=SUMMARY_COUNT_HEADER)
+    completeness["分類"] = "期別資料狀態（病人人數）"
+    summary_zh_frame = pd.concat([completeness[summary_zh_frame.columns], summary_zh_frame], ignore_index=True)
     summary_trend_zh_frame = _build_summary_trend_zh(
         patient_master_frame, treatment_detail_zh_frame
     )
@@ -496,6 +528,8 @@ def export_cleaned_report(
         treatment_detail_zh_frame,
         qa_sample_zh_frame,
     )
+    metrics["patient_stage_pending_count"] = int(patient_stage_queue["病人識別鍵"].nunique())
+    metrics["patient_stage_pending_items"] = len(patient_stage_queue)
     with pd.ExcelWriter(target_file, engine="openpyxl") as writer:
         patient_list_zh_frame.to_excel(writer, index=False, sheet_name=SHEET_PATIENT_LIST)
         summary_zh_frame.to_excel(writer, index=False, sheet_name=SHEET_SUMMARY)
@@ -504,6 +538,7 @@ def export_cleaned_report(
             writer, index=False, sheet_name=SHEET_TREATMENT_DETAIL
         )
         qa_sample_zh_frame.to_excel(writer, index=False, sheet_name=SHEET_QA_SAMPLE)
+        patient_stage_queue.to_excel(writer, index=False, sheet_name=SHEET_PATIENT_STAGE_REVIEW)
         unmatched_icd10_zh_frame.to_excel(
             writer, index=False, sheet_name=SHEET_UNMATCHED_ICD10
         )
@@ -2194,6 +2229,8 @@ def _stage_review_reason(row: pd.Series) -> str:
     primary_tnm_upper = primary_tnm.upper()
 
     if final_stage:
+        if final_stage_source == "patient_confirmed":
+            return "patient_confirmed"
         if final_stage_source == "tnm_mapping":
             return "mapped_from_tnm"
         return "reported_stage"
@@ -2365,6 +2402,9 @@ def _build_patient_list(frame: pd.DataFrame) -> pd.DataFrame:
 
 def _build_patient_list_zh(frame: pd.DataFrame) -> pd.DataFrame:
     working = frame.copy()
+    for column in PATIENT_LIST_ZH_ORDER:
+        if column not in working.columns:
+            working[column] = ""
     for column in TREATMENT_DISPLAY_LABELS:
         if column not in working.columns:
             working[column] = ""

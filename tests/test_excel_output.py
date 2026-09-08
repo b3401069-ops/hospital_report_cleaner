@@ -7,6 +7,7 @@ from report_cleaner.cleaner import (
     PATIENT_LIST_COLUMNS,
     PATIENT_MASTER_COLUMNS,
     export_cleaned_report,
+    _build_patient_list_zh,
 )
 
 
@@ -14,6 +15,25 @@ def _row(columns: list[str], **values: str) -> dict[str, str]:
     row = {column: "" for column in columns}
     row.update(values)
     return row
+
+
+def test_patient_view_preserves_multi_case_summaries_and_unknown_treatments() -> None:
+    summary = "癌別甲：臨床TNM／期別 II | 癌別乙：病理TNM／期別 III"
+    drugs = " | ".join(f"測試藥物{i}" for i in range(35))
+    source = pd.DataFrame([{
+        "medical_record_no": "00123", "patient_name": "測試個案",
+        "final_stage": "II | III", "tnm_summary": summary,
+        "medication_summary": drugs, "chemotherapy": "Y",
+    }])
+    result = _build_patient_list_zh(source)
+    assert len(result) == 1
+    assert result.loc[0, "病歷號"] == "00123"
+    assert result.loc[0, "最終期別"] == "II | III"
+    assert result.loc[0, "TNM／期別摘要"] == summary
+    assert result.loc[0, "藥物摘要"] == drugs
+    assert result.loc[0, "化學治療"] == "有"
+    assert result.loc[0, "標靶治療"] == ""
+    assert source.loc[0, "chemotherapy"] == "Y"
 
 
 def test_export_creates_chinese_first_page_and_readable_patient_table(
@@ -97,15 +117,17 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
     )
 
     workbook = load_workbook(output, data_only=False)
-    assert workbook.sheetnames[:6] == [
+    assert workbook.sheetnames[:7] == [
         "使用說明",
+        "病人查詢",
         "病人總表",
         "統計摘要",
         "月趨勢",
         "治療藥物明細",
         "抽查清單",
     ]
-    assert workbook.active.title == "使用說明"
+    assert workbook.active.title == "病人查詢"
+    assert workbook.calculation.calcMode == "auto"
     assert workbook["使用說明"]["A1"].value == "癌症報表清洗結果"
     assert not workbook["使用說明"].merged_cells.ranges
     assert workbook["使用說明"]["C1"].fill.fgColor.rgb.endswith("17365D")
@@ -114,7 +136,7 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
     assert workbook["使用說明"]["B15"].value == 1
 
     patient_sheet = workbook["病人總表"]
-    assert patient_sheet.freeze_panes == "E2"
+    assert patient_sheet.freeze_panes == "C2"
     assert patient_sheet.auto_filter.ref.endswith(str(patient_sheet.max_row))
     headers = [cell.value for cell in patient_sheet[1]]
     assert headers[:10] == [
@@ -123,15 +145,29 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
         "性別",
         "年齡",
         "癌別摘要",
-        "資料提醒",
-        "診斷名稱",
-        "診斷日",
-        "TNM／期別摘要",
-        "治療摘要",
+        "最終期別",
+        "期別資料狀態",
+        "最後回診日",
+        "最後資料日期",
+        "主責醫師",
     ]
-    assert patient_sheet["J2"].value == "化療、手術"
-    assert "缺回診日" in patient_sheet["F2"].value
-    assert "化學治療" not in headers
+    positions = {cell.value: cell.column for cell in patient_sheet[1]}
+    assert patient_sheet.cell(2, positions["治療摘要"]).value == "化療、手術"
+    assert "缺回診日" in patient_sheet.cell(2, positions["資料提醒"]).value
+    assert patient_sheet.cell(2, positions["化學治療"]).value == "有"
+    assert patient_sheet.cell(2, positions["手術"]).value == "有"
+    assert patient_sheet.cell(2, positions["標靶治療"]).value is None
+    assert patient_sheet.column_dimensions["V"].hidden
+    assert "PatientOverview" in patient_sheet.tables
+    assert "病人期別待確認" in workbook.sheetnames
+    search = workbook["病人查詢"]
+    assert search["B3"].number_format == "@"
+    assert search["B3"].value is None
+    assert "MATCH(" in search["H3"].value
+    assert "COUNTIF(" in search["H2"].value
+    assert "同病歷號有多列" in search["B4"].value
+    assert "INDEX(" in search["B6"].value
+    assert "HYPERLINK(" in search["B29"].value
 
     detail_sheet = workbook["治療藥物明細"]
     assert detail_sheet.freeze_panes == "E2"

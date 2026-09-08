@@ -9,6 +9,9 @@ from openpyxl.utils import get_column_letter
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
+from .patient_views import SEARCH_SHEET, format_patient_table, write_patient_search
+from .patient_stage_review import SHEET as SHEET_PATIENT_STAGE_REVIEW, format_queue_sheet
+
 SHEET_GUIDE = "使用說明"
 SHEET_PATIENT_LIST = "病人總表"
 SHEET_TREATMENT_DETAIL = "治療藥物明細"
@@ -32,6 +35,7 @@ VISIBLE_DATA_SHEETS = (
     SHEET_UNMAPPED_TREATMENTS,
 )
 REVIEW_SHEETS = {
+    SHEET_PATIENT_STAGE_REVIEW,
     SHEET_UNMATCHED_ICD10,
     SHEET_STAGE_REVIEW,
     SHEET_UNMAPPED_DRUGS,
@@ -67,12 +71,17 @@ def format_report_workbook(workbook: Workbook, metrics: Mapping[str, int]) -> No
         if worksheet.title == SHEET_GUIDE:
             continue
         _format_data_sheet(worksheet)
+        if worksheet.title == SHEET_PATIENT_STAGE_REVIEW:
+            format_queue_sheet(worksheet)
 
     for sheet_name in TECHNICAL_SHEETS:
         if sheet_name in workbook.sheetnames:
             workbook[sheet_name].sheet_state = "hidden"
 
-    workbook.active = 0
+    if SHEET_PATIENT_LIST in workbook.sheetnames:
+        format_patient_table(workbook[SHEET_PATIENT_LIST])
+        write_patient_search(workbook)
+    workbook.active = 1 if SEARCH_SHEET in workbook.sheetnames else 0
 
 
 def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None:
@@ -90,14 +99,14 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
     worksheet["A2"] = f"產生時間：{datetime.now():%Y-%m-%d %H:%M}"
     worksheet["A2"].font = Font(name="Microsoft JhengHei", size=10, color="666666")
 
-    worksheet["A4"] = "從「病人總表」開始閱讀"
+    worksheet["A4"] = "查單人用「病人查詢」，比較多人用「病人總表」"
     worksheet["A4"].font = Font(name="Microsoft JhengHei", size=14, bold=True, color=NAVY)
     worksheet["A4"].alignment = Alignment(vertical="center")
     for column in range(1, 4):
         worksheet.cell(row=4, column=column).fill = PatternFill("solid", fgColor=LIGHT_BLUE)
     worksheet.row_dimensions[4].height = 28
 
-    worksheet["A5"] = "病人總表是日常查閱入口；黃色分頁代表需要人工確認。"
+    worksheet["A5"] = "查詢頁輸入病歷號；總表用欄名的下拉選單篩選癌別、期別或治療。"
     worksheet["A5"].font = Font(name="Microsoft JhengHei", size=11, color=TEXT)
 
     worksheet["A7"] = "本次結果"
@@ -119,6 +128,8 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         ("診斷日期異常", "invalid_diagnosis_date_count"),
         ("未來診斷日", "future_diagnosis_date_count"),
         ("已合併重複治療列", "collapsed_treatment_rows"),
+        ("期別待確認病人人數", "patient_stage_pending_count"),
+        ("期別待確認項目數", "patient_stage_pending_items"),
     ]
     for row_index, (label, key) in enumerate(metric_rows, start=8):
         worksheet.cell(row=row_index, column=1, value=label)
@@ -140,6 +151,8 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         cell.alignment = Alignment(vertical="center")
 
     sheet_guide = [
+        (SEARCH_SHEET, "輸入病歷號，一次看完整摘要", "查單一病人的治療、藥物與回診"),
+        (SHEET_PATIENT_STAGE_REVIEW, "列出病人、個案、TNM與來源", "到 review 資料夾的病人期別確認檔填寫"),
         (SHEET_PATIENT_LIST, "精簡的一人一列日常總表", "平常查病人、癌別、期別、治療與藥物"),
         (SHEET_SUMMARY, "依癌別、期別、性別、年齡與治療彙總", "看整體分布"),
         (SHEET_TREND, "近五年每月新診斷與實際治療事件", "看月份變化與工作量"),
@@ -168,6 +181,9 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         name="Microsoft JhengHei", size=12, bold=True, color=NAVY
     )
     notes = [
+        "病人期別待確認列出待核對個案；請在 review／病人期別確認.xlsx 填寫、儲存，再重新清洗。",
+        "已有期別不等於已核驗；期別統計需同時查看待確認病人人數，多癌別病人可列入多個期別。",
+        "病人總表右側詳細欄位可按上方＋展開；完整長文字也可在病人查詢閱讀。",
         "「有」表示來源資料中找到該治療紀錄。",
         "治療欄空白表示來源資料未找到紀錄，不等於確認未接受治療。",
         "病人總表以病歷號優先合併；多癌別、多個案與多次治療會保留在摘要及明細。",

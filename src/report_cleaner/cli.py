@@ -72,6 +72,13 @@ def main(argv: list[str] | None = None) -> None:
         unmapped_treatment_orders_frame,
         paths.output_file,
     )
+    from .patient_stage_review import review_path, sync_review
+
+    try:
+        confirmation_file = sync_review(standardized_frame, review_path(paths.root))
+    except PermissionError:
+        print("報表已產生，但病人期別確認檔無法更新。請儲存並關閉該 Excel 後重新清洗。")
+        raise SystemExit(1)
 
     print("報表清洗完成。")
     print(f"已處理來源檔：{len(processed_files)} 份")
@@ -83,6 +90,7 @@ def main(argv: list[str] | None = None) -> None:
     print(f"未分類藥物醫令：{len(unmapped_drug_orders_frame)} 筆")
     print(f"未分類治療醫令：{len(unmapped_treatment_orders_frame)} 筆")
     print(f"輸出檔案：{actual_output}")
+    print(f"病人期別確認檔：{confirmation_file}")
 
 
 if __name__ == "__main__":
