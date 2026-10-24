@@ -11,6 +11,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from .patient_views import SEARCH_SHEET, format_patient_table, write_patient_search
 from .patient_stage_review import SHEET as SHEET_PATIENT_STAGE_REVIEW, format_queue_sheet
+from .cancer_evidence import PATHOLOGY_SHEET, ELIGIBILITY_SHEET
 
 SHEET_GUIDE = "使用說明"
 SHEET_PATIENT_LIST = "病人總表"
@@ -35,6 +36,7 @@ VISIBLE_DATA_SHEETS = (
     SHEET_UNMAPPED_TREATMENTS,
 )
 REVIEW_SHEETS = {
+    ELIGIBILITY_SHEET,
     SHEET_PATIENT_STAGE_REVIEW,
     SHEET_UNMATCHED_ICD10,
     SHEET_STAGE_REVIEW,
@@ -130,6 +132,9 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         ("已合併重複治療列", "collapsed_treatment_rows"),
         ("期別待確認病人人數", "patient_stage_pending_count"),
         ("期別待確認項目數", "patient_stage_pending_items"),
+        ("全部來源病人人數", "all_patient_rows"),
+        ("癌症資格待確認人數", "eligibility_pending_rows"),
+        ("病理紀錄筆數", "pathology_rows"),
     ]
     for row_index, (label, key) in enumerate(metric_rows, start=8):
         worksheet.cell(row=row_index, column=1, value=label)
@@ -151,6 +156,8 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         cell.alignment = Alignment(vertical="center")
 
     sheet_guide = [
+        (ELIGIBILITY_SHEET, "尚缺納入總表依據的病人", "有醫令不等於有癌症；保留待核，不列入癌症統計"),
+        (PATHOLOGY_SHEET, "病理結果、編號及日期原始紀錄", "核對惡性依據；未出現不代表非癌症"),
         (SEARCH_SHEET, "輸入病歷號，一次看完整摘要", "查單一病人的治療、藥物與回診"),
         (SHEET_PATIENT_STAGE_REVIEW, "列出病人、個案、TNM與來源", "到 review 資料夾的病人期別確認檔填寫"),
         (SHEET_PATIENT_LIST, "精簡的一人一列日常總表", "平常查病人、癌別、期別、治療與藥物"),
@@ -181,6 +188,9 @@ def _write_guide_sheet(worksheet: Worksheet, metrics: Mapping[str, int]) -> None
         name="Microsoft JhengHei", size=12, bold=True, color=NAVY
     )
     notes = [
+        "總表只納入有收案或病理惡性依據的病人；資格待確認另列，原始明細均保留。",
+        "治療欄及月趨勢表示納入病人的治療／醫令紀錄，未逐次認定與癌症的關聯。",
+        "病理結果不自動推定癌別、TNM或初次診斷日；陰性紀錄不會取消其他收案依據。",
         "病人期別待確認列出待核對個案；請在 review／病人期別確認.xlsx 填寫、儲存，再重新清洗。",
         "已有期別不等於已核驗；期別統計需同時查看待確認病人人數，多癌別病人可列入多個期別。",
         "病人總表右側詳細欄位可按上方＋展開；完整長文字也可在病人查詢閱讀。",
@@ -255,11 +265,37 @@ def _format_data_sheet(worksheet: Worksheet) -> None:
             "藥物摘要": 36,
             "來源報表": 28,
             "藥物／醫令名稱": 32,
+            "納入依據": 28,
+            "病人納入依據": 28,
+            "待確認原因": 48,
+            "待核對事項": 40,
+            "來源檔案": 32,
+            "癌症治療關聯": 48,
+            "病理結果（原文）": 18,
+            "報告層級": 16,
+            "診斷比對（原文）": 18,
+            "病理項目": 32,
+            "報告時間": 22,
         }
         width = preferred_widths.get(header, width)
         worksheet.column_dimensions[get_column_letter(column_index)].width = width
 
     headers = {str(cell.value or ""): cell.column for cell in worksheet[1]}
+    if worksheet.title in {PATHOLOGY_SHEET, ELIGIBILITY_SHEET, SHEET_TREATMENT_DETAIL, SHEET_SUMMARY}:
+        for row in worksheet.iter_rows(min_row=2):
+            worksheet.row_dimensions[row[0].row].height = 32 if worksheet.title == SHEET_SUMMARY else 52
+            for cell in row:
+                cell.alignment = Alignment(vertical="top", wrap_text=True)
+                cell.font = Font(name="Microsoft JhengHei", size=11, color=TEXT)
+        for label in ("病歷號", "個案編號", "病理編號", "醫令碼", "病理醫令"):
+            if label in headers:
+                for row in worksheet.iter_rows(min_row=2, min_col=headers[label], max_col=headers[label]):
+                    row[0].number_format = "@"
+        if worksheet.title in {PATHOLOGY_SHEET, ELIGIBILITY_SHEET}:
+            worksheet.freeze_panes = "C2"
+        if worksheet.title == SHEET_SUMMARY:
+            worksheet.column_dimensions["A"].width = 42
+            worksheet.column_dimensions["B"].width = 36
     if worksheet.title == SHEET_PATIENT_LIST and "資料提醒" in headers:
         alert_column = headers["資料提醒"]
         for row_index in range(2, worksheet.max_row + 1):

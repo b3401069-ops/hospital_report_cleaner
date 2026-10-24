@@ -102,6 +102,8 @@ def apply_confirmations(frame: pd.DataFrame, path: Path) -> pd.DataFrame:
     if "final_stage_source" not in result:
         result["final_stage_source"] = ""
     for index, row in result.iterrows():
+        if "cohort_eligible" in result and text(row.get("cohort_eligible")) != "Y":
+            continue
         record = confirmed.get(confirmation_key(row))
         if record and not text(row.get("final_stage", "")):
             result.at[index, "final_stage"] = record["確認期別"]
@@ -110,6 +112,8 @@ def apply_confirmations(frame: pd.DataFrame, path: Path) -> pd.DataFrame:
 
 
 def build_queue(frame: pd.DataFrame) -> pd.DataFrame:
+    if "cohort_eligible" in frame:
+        frame = frame.loc[frame["cohort_eligible"].eq("Y")]
     if frame.empty:
         return pd.DataFrame(columns=COLUMNS)
     working = _prepare(frame)

@@ -60,11 +60,12 @@ if /I "%COMMAND%"=="clean" set "COMMAND_LABEL=清洗報表"
 if /I "%COMMAND%"=="export-mapping-review" set "COMMAND_LABEL=匯出待確認規則"
 if /I "%COMMAND%"=="apply-mapping-review" set "COMMAND_LABEL=套用確認規則"
 if /I "%COMMAND%"=="check-env" set "COMMAND_LABEL=檢查環境"
+if /I "%COMMAND%"=="case-manager" set "COMMAND_LABEL=個管報表"
 
 echo.
 echo 正在執行：%COMMAND_LABEL%
 echo.
-%PYTHON_CMD% -m report_cleaner.cli %COMMAND%
+%PYTHON_CMD% -m report_cleaner.cli %*
 set "EXIT_CODE=%ERRORLEVEL%"
 
 echo.

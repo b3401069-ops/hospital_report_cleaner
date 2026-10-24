@@ -8,6 +8,10 @@ import warnings
 import pandas as pd
 
 from .config import CSV_ENCODING, ProjectPaths
+from .cancer_evidence import (
+    PATHOLOGY_SHEET, ELIGIBILITY_SHEET, PATIENT_FIELDS, PATHOLOGY_FIELDS,
+    mark_registry_source, annotate_evidence, eligible_rows, pathology_output, eligibility_output,
+)
 from .patient_stage_review import (
     SHEET as SHEET_PATIENT_STAGE_REVIEW,
     apply_confirmations, build_queue, review_path, status_by_patient,
@@ -35,6 +39,7 @@ SENSITIVE_COLUMN_PATTERNS = (
 )
 SUMMARY_KEYWORDS = ("合計", "總計", "subtotal", "total")
 STANDARD_COLUMNS = [
+    *PATIENT_FIELDS, *PATHOLOGY_FIELDS, "registry_evidence", "pathology_review_note",
     "patient_name",
     "sex",
     "medical_record_no",
@@ -87,6 +92,7 @@ STANDARD_COLUMNS = [
     "report_period_end",
 ]
 PATIENT_MASTER_COLUMNS = [
+    *PATIENT_FIELDS,
     "patient_name",
     "sex",
     "medical_record_no",
@@ -136,6 +142,7 @@ PATIENT_MASTER_COLUMNS = [
     "report_period_end",
 ]
 PATIENT_LIST_COLUMNS = [
+    *PATIENT_FIELDS,
     "patient_name",
     "sex",
     "medical_record_no",
@@ -180,6 +187,8 @@ PATIENT_LIST_COLUMNS = [
     "rfa_date",
 ]
 PATIENT_LIST_ZH_HEADERS = {
+    "cancer_evidence": "納入依據",
+    "evidence_sources": "納入依據來源",
     "patient_name": "病患姓名",
     "sex": "性別",
     "medical_record_no": "病歷號",
@@ -234,6 +243,7 @@ PATIENT_LIST_ZH_ORDER = [
     "cancer_summary",
     "final_stage",
     "stage_status",
+    "cancer_evidence",
     "last_followup_date",
     "latest_activity_date",
     "doctor",
@@ -256,6 +266,7 @@ PATIENT_LIST_ZH_ORDER = [
     "cancer_case_count",
     "case_category_label",
     "death_date",
+    "evidence_sources",
 ]
 TREATMENT_DISPLAY_LABELS = {
     "chemotherapy": "化療",
@@ -411,7 +422,7 @@ def run_cleaning(
 
         cleaned_frames.append(frame)
         standardized_frames.append(
-            _build_standardized_frame(
+            mark_registry_source(_build_standardized_frame(
                 frame,
                 source_file.stem,
                 source_file.name,
@@ -419,7 +430,7 @@ def run_cleaning(
                 period_end,
                 drug_treatment_mapping,
                 order_treatment_mapping,
-            )
+            ), source_file.stem)
         )
         processed_files.append(source_file.name)
 
@@ -447,12 +458,13 @@ def run_cleaning(
     standardized = _apply_stage_mapping(standardized, tnm_stage_mapping)
     standardized = _add_record_keys(standardized)
     standardized = _deduplicate_standardized(standardized)
+    standardized = annotate_evidence(standardized)
     standardized = apply_confirmations(standardized, review_path(paths.root))
     standardized = _reorder_columns(standardized, STANDARD_COLUMNS)
     patient_master = _build_patient_master(standardized)
-    patient_list = _build_patient_list(patient_master)
+    patient_list = _build_patient_list(eligible_rows(patient_master))
     unmatched_icd10 = _build_unmatched_icd10_report(standardized)
-    stage_review = _build_stage_review_report(standardized)
+    stage_review = _build_stage_review_report(eligible_rows(standardized))
     unmapped_drug_orders = _build_unmapped_drug_orders_report(standardized)
     unmapped_treatment_orders = _build_unmapped_treatment_orders_report(standardized)
 
@@ -484,7 +496,10 @@ def export_cleaned_report(
     target_file = _resolve_writable_output_path(output_file)
     staging_data = standardized_frame.copy()
     staging_data["patient_key"] = _build_patient_key_series(staging_data)
-    patient_stage_queue = build_queue(staging_data)
+    cohort_data = eligible_rows(staging_data)
+    cohort_master = eligible_rows(patient_master_frame)
+    patient_list_frame = eligible_rows(patient_list_frame)
+    patient_stage_queue = build_queue(cohort_data)
     annotated_patients = patient_list_frame.copy()
     annotated_patients["patient_key"] = _build_patient_key_series(annotated_patients)
     if "final_stage_source" in patient_master_frame:
@@ -494,16 +509,22 @@ def export_cleaned_report(
         annotated_patients["final_stage_source"] = annotated_patients["patient_key"].map(sources).fillna("")
     annotated_patients["stage_status"] = status_by_patient(annotated_patients, patient_stage_queue)
     patient_list_zh_frame = _build_patient_list_zh(annotated_patients)
-    treatment_detail_zh_frame = _build_treatment_detail_zh(standardized_frame)
+    treatment_detail_zh_frame = _build_treatment_detail_zh(cohort_data)
     qa_sample_zh_frame = _build_quality_review_sample_zh(
-        patient_list_frame, standardized_frame
+        patient_list_frame, cohort_data
     )
-    summary_zh_frame = _build_summary_zh(patient_master_frame)
+    summary_zh_frame = _build_summary_zh(cohort_master)
     completeness = annotated_patients["stage_status"].value_counts().rename_axis("項目").reset_index(name=SUMMARY_COUNT_HEADER)
     completeness["分類"] = "期別資料狀態（病人人數）"
     summary_zh_frame = pd.concat([completeness[summary_zh_frame.columns], summary_zh_frame], ignore_index=True)
+    eligibility_counts = patient_master_frame.get("cancer_evidence", pd.Series(dtype="object")).value_counts()
+    eligibility_summary = pd.DataFrame([
+        {"分類": "納入依據（全部病人人數）", "項目": label, SUMMARY_COUNT_HEADER: count}
+        for label, count in eligibility_counts.items()
+    ], columns=summary_zh_frame.columns)
+    summary_zh_frame = pd.concat([eligibility_summary, summary_zh_frame], ignore_index=True)
     summary_trend_zh_frame = _build_summary_trend_zh(
-        patient_master_frame, treatment_detail_zh_frame
+        cohort_master, treatment_detail_zh_frame
     )
     pending_stage_review_frame = _build_pending_stage_review_output(stage_review_frame)
     unmatched_icd10_zh_frame = _localize_review_frame(
@@ -530,6 +551,9 @@ def export_cleaned_report(
     )
     metrics["patient_stage_pending_count"] = int(patient_stage_queue["病人識別鍵"].nunique())
     metrics["patient_stage_pending_items"] = len(patient_stage_queue)
+    metrics["all_patient_rows"] = len(patient_master_frame)
+    metrics["eligibility_pending_rows"] = len(patient_master_frame) - len(cohort_master)
+    metrics["pathology_rows"] = len(pathology_output(staging_data))
     with pd.ExcelWriter(target_file, engine="openpyxl") as writer:
         patient_list_zh_frame.to_excel(writer, index=False, sheet_name=SHEET_PATIENT_LIST)
         summary_zh_frame.to_excel(writer, index=False, sheet_name=SHEET_SUMMARY)
@@ -539,6 +563,8 @@ def export_cleaned_report(
         )
         qa_sample_zh_frame.to_excel(writer, index=False, sheet_name=SHEET_QA_SAMPLE)
         patient_stage_queue.to_excel(writer, index=False, sheet_name=SHEET_PATIENT_STAGE_REVIEW)
+        eligibility_output(patient_master_frame, staging_data).to_excel(writer, index=False, sheet_name=ELIGIBILITY_SHEET)
+        pathology_output(staging_data).to_excel(writer, index=False, sheet_name=PATHOLOGY_SHEET)
         unmatched_icd10_zh_frame.to_excel(
             writer, index=False, sheet_name=SHEET_UNMATCHED_ICD10
         )
@@ -651,21 +677,16 @@ def _extract_report_period(file_name: str, preview: pd.DataFrame) -> tuple[str, 
 
 
 def _extract_period_from_filename(file_name: str) -> tuple[str, str]:
-    normalized_name = file_name.replace("_", "").replace("-", "")
-
-    range_match = re.search(r"(20\d{2}(?:0[1-9]|1[0-2])(?:[0-3]\d)?)\D*(20\d{2}(?:0[1-9]|1[0-2])(?:[0-3]\d)?)", normalized_name)
-    if range_match:
-        return (
-            _normalize_period_token(range_match.group(1), is_end=False),
-            _normalize_period_token(range_match.group(2), is_end=True),
-        )
-
-    month_match = re.search(r"(20\d{2}(?:0[1-9]|1[0-2]))", normalized_name)
-    if month_match:
-        token = month_match.group(1)
-        return _normalize_period_token(token, is_end=False), _normalize_period_token(token, is_end=True)
-
-    return "", ""
+    # Keep digit boundaries: joining ROC ranges such as 11204-11206 first
+    # accidentally invents a Gregorian month in 2041.
+    tokens = re.findall(r"(?<!\d)((?:20\d{2}|1\d{2})(?:0[1-9]|1[0-2])(?:[0-3]\d)?)(?!\d)", file_name)
+    if not tokens:
+        return "", ""
+    start = _normalize_period_token(tokens[0], is_end=False)
+    end = _normalize_period_token(tokens[1] if len(tokens) > 1 else tokens[0], is_end=True)
+    if pd.isna(pd.to_datetime(start, errors="coerce")) or pd.isna(pd.to_datetime(end, errors="coerce")) or start > end:
+        return "", ""
+    return start, end
 
 
 def _extract_period_from_text(text: str) -> tuple[str, str]:
@@ -704,7 +725,7 @@ def _extract_period_from_text(text: str) -> tuple[str, str]:
 
 def _normalize_period_token(token: str, *, is_end: bool) -> str:
     digits = re.sub(r"\D", "", token)
-    if len(digits) == 7:
+    if len(digits) in (5, 7):
         digits = str(int(digits[:3]) + 1911) + digits[3:]
     if len(digits) == 4:
         return f"{digits}-12-31" if is_end else f"{digits}-01-01"
@@ -935,6 +956,8 @@ def _build_standardized_frame(
     drug_treatment_mapping: list[dict[str, str]] | None = None,
     order_treatment_mapping: list[dict[str, str]] | None = None,
 ) -> pd.DataFrame:
+    if {"病理編號", "層級"}.issubset(frame.columns) and any(c in frame for c in ("結果", "result")):
+        return _standardize_pathology(frame, report_name, source_file, period_start, period_end)
     if {"醫令代碼", "醫令名稱"}.issubset(frame.columns):
         return _standardize_order_detail(
             frame,
@@ -959,7 +982,7 @@ def _build_standardized_frame(
         return _standardize_chemo_list(frame, report_name, source_file, period_start, period_end)
     if "TNM" in report_name:
         return _standardize_tnm(frame, report_name, source_file, period_start, period_end)
-    if any(tag in report_name for tag in ("治療計畫書", "計畫書", "收案清單", "收案名單")):
+    if any(tag in report_name for tag in ("治療計畫書", "計畫書", "收案清單", "收案名單", "個案清單")):
         return _standardize_treatment_plan(frame, report_name, source_file, period_start, period_end)
     if "住院人次人日" in report_name:
         return _standardize_inpatient(frame, report_name, source_file, period_start, period_end)
@@ -969,7 +992,29 @@ def _build_standardized_frame(
     standardized["source_file"] = source_file
     standardized["report_period_start"] = period_start
     standardized["report_period_end"] = period_end
+    for column in STANDARD_COLUMNS:
+        if column not in standardized:
+            standardized[column] = ""
     return _reorder_columns(standardized, STANDARD_COLUMNS)
+
+
+def _standardize_pathology(frame, report_name, source_file, period_start, period_end) -> pd.DataFrame:
+    result = pd.DataFrame("", index=frame.index, columns=STANDARD_COLUMNS)
+    result["patient_name"] = _first_available_column(frame, ["姓名", "病患姓名"])
+    result["medical_record_no"] = _first_available_column(frame, ["病歷號", "病歷號碼"])
+    for column, source in {
+        "pathology_id": "病理編號", "pathology_report_time": "報告時間",
+        "pathology_agreement": "診斷", "pathology_level": "層級",
+        "pathology_item": "細項名稱", "pathology_order": "醫令", "case_date": "看診日",
+    }.items():
+        result[column] = _column_or_blank(frame, source)
+    result["pathology_result"] = _first_available_column(frame, ["結果", "result"])
+    result["pathology_report_time"] = result["pathology_report_time"].map(_normalize_date_value)
+    result["report_date"] = result["pathology_report_time"]
+    result["order_category"] = "pathology"
+    result["report_name"], result["source_file"] = report_name, source_file
+    result["report_period_start"], result["report_period_end"] = period_start, period_end
+    return result
 
 
 def _standardize_chemo_list(
@@ -1342,15 +1387,8 @@ def _standardize_order_detail(
     encounter_id = _first_non_blank_series(_column_or_blank(frame, "住院號"), _column_or_blank(frame, "就醫序號"))
     order_start = _first_non_blank_series(_column_or_blank(frame, "執行日期-起"), _column_or_blank(frame, "看診日期"))
     case_date = _first_non_blank_series(_column_or_blank(frame, "住院日"), _column_or_blank(frame, "看診日期"))
-    cancer_type, diagnosis_text = _infer_cancer_from_report_name(report_name)
     treatment_flags = _classify_order_treatment(
         report_name, order_code, order_name, order_treatment_mapping
-    )
-    mapped_cancer_type = _map_order_rule_value(
-        order_code, order_name, order_treatment_mapping, "cancer_type"
-    )
-    mapped_diagnosis_text = _map_order_rule_value(
-        order_code, order_name, order_treatment_mapping, "diagnosis_text"
     )
 
     standardized = pd.DataFrame(
@@ -1368,15 +1406,9 @@ def _standardize_order_detail(
             "case_date": case_date,
             "death_date": "",
             "last_followup_date": "",
-            "cancer_type": _first_non_blank_series(
-                mapped_cancer_type,
-                pd.Series(cancer_type, index=frame.index, dtype="object"),
-            ),
+            "cancer_type": "",
             "icd10_code": "",
-            "diagnosis_text": _first_non_blank_series(
-                mapped_diagnosis_text,
-                pd.Series(diagnosis_text, index=frame.index, dtype="object"),
-            ),
+            "diagnosis_text": "",
             "clinical_tnm": "",
             "pathologic_tnm": "",
             "final_stage": "",
@@ -1974,7 +2006,6 @@ def _enrich_from_patient_lookup(
 
     mrn_index: dict[str, str] = {}
     name_birth_index: dict[str, str] = {}
-    unique_name_index: dict[str, str | None] = {}
     for case_id, payload in lookup.items():
         mrn = str(payload.get("medical_record_no", "")).strip()
         name = str(payload.get("patient_name", "")).strip()
@@ -1983,11 +2014,6 @@ def _enrich_from_patient_lookup(
             mrn_index.setdefault(mrn, case_id)
         if name and birth:
             name_birth_index.setdefault(f"{name}|{birth}", case_id)
-        if name:
-            if name in unique_name_index and unique_name_index[name] != case_id:
-                unique_name_index[name] = None
-            else:
-                unique_name_index.setdefault(name, case_id)
 
     resolved_keys: list[str] = []
     current_case_ids = enriched["case_id"].fillna("").astype(str).str.strip()
@@ -1997,20 +2023,23 @@ def _enrich_from_patient_lookup(
 
     for idx in enriched.index:
         case_id = current_case_ids.loc[idx]
-        if case_id and case_id in lookup:
+        if case_id and case_id in lookup and (
+            not current_mrns.loc[idx] or not lookup[case_id].get("medical_record_no")
+            or current_mrns.loc[idx] == lookup[case_id]["medical_record_no"]
+        ):
             resolved_keys.append(case_id)
             continue
         mrn = current_mrns.loc[idx]
         if mrn and mrn in mrn_index:
             resolved_keys.append(mrn_index[mrn])
             continue
+        if mrn:
+            resolved_keys.append("")
+            continue
         name = current_names.loc[idx]
         birth = current_births.loc[idx]
         if name and birth and f"{name}|{birth}" in name_birth_index:
             resolved_keys.append(name_birth_index[f"{name}|{birth}"])
-            continue
-        if name and unique_name_index.get(name):
-            resolved_keys.append(str(unique_name_index[name]))
             continue
         resolved_keys.append("")
 
@@ -2106,7 +2135,10 @@ def _build_record_key_series(frame: pd.DataFrame) -> pd.Series:
     keys = []
     for idx in frame.index:
         report_name = _safe_cell(frame, idx, "report_name")
-        if _safe_cell(frame, idx, "order_code"):
+        if _safe_cell(frame, idx, "order_category") == "pathology":
+            key_parts = [report_name, _safe_cell(frame, idx, "medical_record_no")]
+            key_parts.extend(_safe_cell(frame, idx, column) for column in PATHOLOGY_FIELDS)
+        elif _safe_cell(frame, idx, "order_code"):
             key_parts = [
                 report_name,
                 _safe_cell(frame, idx, "medical_record_no"),
@@ -2362,7 +2394,7 @@ def _summarize_unmapped_orders(
 
 
 def _add_record_keys(frame: pd.DataFrame) -> pd.DataFrame:
-    enriched = frame.copy()
+    enriched = frame.drop(columns=["patient_key"], errors="ignore").copy()
     patient_key = _build_patient_key_series(enriched)
     enriched.insert(0, "patient_key", patient_key)
     return enriched
@@ -2468,6 +2500,7 @@ def _build_treatment_detail_zh(frame: pd.DataFrame) -> pd.DataFrame:
         "紀錄筆數",
         "主責醫師",
         "來源報表",
+        "癌症治療關聯",
     ]
     if frame.empty:
         return pd.DataFrame(columns=columns)
@@ -2502,6 +2535,7 @@ def _build_treatment_detail_zh(frame: pd.DataFrame) -> pd.DataFrame:
             "癌別": _format_cancer_type_display(_scalar_text(row.get("cancer_type", ""))),
             "主責醫師": _scalar_text(row.get("doctor", "")),
             "來源報表": _scalar_text(row.get("report_name", "")),
+            "癌症治療關聯": "未逐次核驗；不能僅憑病人納入資格認定",
         }
         row_order_code = _scalar_text(row.get("order_code", ""))
         row_order_name = _scalar_text(row.get("order_name", ""))
@@ -2563,6 +2597,7 @@ def _build_treatment_detail_zh(frame: pd.DataFrame) -> pd.DataFrame:
                 "紀錄筆數": "sum",
                 "主責醫師": _join_unique_text,
                 "來源報表": _join_unique_text,
+                "癌症治療關聯": _join_unique_text,
             }
         )
         .reindex(columns=columns)

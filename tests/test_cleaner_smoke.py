@@ -566,7 +566,7 @@ def test_hospital_surgery_and_radiation_order_codes_are_mapped() -> None:
     assert flags["radiation_therapy"].tolist() == ["", "", "", "Y"]
 
 
-def test_standardize_order_detail_uses_mapping_cancer_type() -> None:
+def test_standardize_order_detail_does_not_use_mapping_as_cancer_diagnosis() -> None:
     frame = pd.DataFrame(
         {
             "病歷號碼": ["001"],
@@ -589,8 +589,8 @@ def test_standardize_order_detail_uses_mapping_cancer_type() -> None:
     standardized = _standardize_order_detail(frame, "測試手術", "surgery.xls", "", "", mapping)
 
     assert standardized.loc[0, "surgery"] == "Y"
-    assert standardized.loc[0, "cancer_type"] == "TS_測試癌"
-    assert standardized.loc[0, "diagnosis_text"] == "測試癌"
+    assert standardized.loc[0, "cancer_type"] == ""
+    assert standardized.loc[0, "diagnosis_text"] == ""
 
 
 def test_unmapped_order_reports_list_only_unclassified_orders() -> None:

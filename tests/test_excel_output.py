@@ -44,6 +44,8 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
             _row(
                 PATIENT_MASTER_COLUMNS,
                 patient_name="測試個案",
+                cohort_eligible="Y",
+                cancer_evidence="有癌症收案依據",
                 sex="女",
                 medical_record_no="TEST001",
                 age_at_diagnosis="65",
@@ -65,6 +67,8 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
             _row(
                 PATIENT_LIST_COLUMNS,
                 patient_name="測試個案",
+                cohort_eligible="Y",
+                cancer_evidence="有癌症收案依據",
                 sex="女",
                 medical_record_no="TEST001",
                 age_at_diagnosis="65",
@@ -147,9 +151,9 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
         "癌別摘要",
         "最終期別",
         "期別資料狀態",
+        "納入依據",
         "最後回診日",
         "最後資料日期",
-        "主責醫師",
     ]
     positions = {cell.value: cell.column for cell in patient_sheet[1]}
     assert patient_sheet.cell(2, positions["治療摘要"]).value == "化療、手術"
@@ -157,7 +161,8 @@ def test_export_creates_chinese_first_page_and_readable_patient_table(
     assert patient_sheet.cell(2, positions["化學治療"]).value == "有"
     assert patient_sheet.cell(2, positions["手術"]).value == "有"
     assert patient_sheet.cell(2, positions["標靶治療"]).value is None
-    assert patient_sheet.column_dimensions["V"].hidden
+    from openpyxl.utils import get_column_letter
+    assert patient_sheet.column_dimensions[get_column_letter(positions["診斷日"])].hidden
     assert "PatientOverview" in patient_sheet.tables
     assert "病人期別待確認" in workbook.sheetnames
     search = workbook["病人查詢"]
