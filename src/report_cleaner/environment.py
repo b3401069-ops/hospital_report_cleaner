@@ -13,6 +13,7 @@ REQUIRED_RUNTIME_PACKAGES = {
     "openpyxl": "openpyxl",
     "xlrd": "xlrd",
     "python-dateutil": "dateutil",
+    "holidays": "holidays",
 }
 
 REQUIRED_MAPPING_FILES = (

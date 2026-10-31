@@ -46,7 +46,8 @@ def test_case_grain_plan_actual_and_scope(root):
     assert report.planned[0]["手術"]
     assert report.actual[0]["手術"]
     assert not report.actual[1]["手術"]
-    assert not report.actual[0]["放射治療"]
+    assert "放療計畫（不計照射）" in report.actual[0]["放射治療"]
+    assert "放射治療" not in report.actual[0]["治療摘要"]
     assert report.actual[1]["化學治療"]
     assert report.actual[0]["查詢鍵"]=="0000001234#1"
     assert report.actual[1]["查詢鍵"]=="0000001234#2"

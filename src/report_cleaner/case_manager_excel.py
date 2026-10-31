@@ -17,10 +17,12 @@ from openpyxl.workbook.properties import CalcProperties
 
 from .case_manager import CaseReport
 from .case_manager_sources import day, text
+from .case_manager_rules import holiday_calendar
+from .case_manager_formulas import live_followup, summary_tables
 
 PLANNED = "收案日期|病患姓名|病歷號|性別|年齡|癌別|分期|期別資料狀態|納入依據|最後回診日|最後資料日期|主責醫師|個管師|手術|放射治療|化學治療|標靶治療|免疫治療|抗荷爾蒙治療|肝動脈栓塞（TACE）|射頻燒灼（RFA）|藥物種類數|資料提醒|個案編號|診斷日|診斷名稱|CCRT|預定緩和治療|治療摘要|藥物摘要|計畫書日期|計畫資料來源|癌症個案數|查詢鍵".split("|")
 ACTUAL = "收案日期|個案分類|結案日期/原因|死亡日期|必要提報事件|是否符合計畫書|病患姓名|病歷號|性別|年齡|癌別|分期|期別資料狀態|納入依據|最後回診日|最後資料日期|最近追蹤日|追蹤狀態|失聯狀態|主責醫師|個管師|手術|放射治療|抗荷爾蒙治療|化學治療|標靶治療|免疫治療|肝動脈栓塞（TACE）|射頻燒灼（RFA）|藥物種類數|資料提醒|首次治療日|首次治療項目|診斷至首次治療天數|首次手術日|術後至化療天數|術後至放療天數|放療完成度|放療中斷|MDT討論|計畫書後新療程|個案編號|診斷日|診斷名稱|CCRT|治療摘要|藥物摘要|癌症個案數|收案年度|收案季|查詢鍵".split("|")
-TASKS = "嚴重度|個管師|病歷號|個案編號|癌別|待辦類型|說明|相關日期|逾期天數|建議動作|確認結果|確認備註".split("|")
+TASKS = "嚴重度|個管師|病歷號|個案編號|癌別|待辦類型|說明|相關日期|逾期天數|建議動作|確認結果|確認備註|確認鍵".split("|")
 MANUAL = "個案編號|病歷號|待辦類型|確認結果|確認人|確認日期|備註|比對鍵（自動）".split("|")
 MANUAL_CONTEXT = ["相關日期", "待辦說明", "本次狀態"]
 OPTIONS = ["已確認無異常", "外院執行", "病人拒絕治療", "計畫變更", "已補登資料", "已聯繫追蹤", "已安排MDT", "確實異常-處理中", "確實異常-已提報", "其他（見備註）"]
@@ -258,8 +260,8 @@ def export_report(report: CaseReport, output: Path, manual_records, manual_path)
     book.remove(book.active)
     book.calculation = CalcProperties(calcId=191029, fullCalcOnLoad=True)
     instructions = [
-        "個管版：同一病人可有多個癌症個案；一個個案一列，預定／實際兩表同序。",
-        f"統計截止日：{report.as_of}。提醒以來源涵蓋日為基準，不以開檔當天推算。",
+        "彙整版：同一病人可有多個癌症個案；一個個案一列，預定／實際兩表同序。",
+        f"統計截止日：{report.as_of}。待辦為截止日快照；實際總表追蹤／失聯與相關統計以TODAY()開檔更新。",
         "病人查詢：B3輸入病歷號（可省略前導零）；E3切換同病人的個案序號。",
         "治療格顯示本批醫令日期範圍及名稱；不是完整劑量／分次帳。長內容請展開列高或看明細。",
         "預定治療只來自計畫書；填寫日期不代表實際治療日期。實際表的有醫令也不保證已施作。",
@@ -277,8 +279,13 @@ def export_report(report: CaseReport, output: Path, manual_records, manual_path)
         "本報表人工確認紀錄是快照，不是永久輸入位置。確認待辦不會自動改期別或醫療紀錄。",
         "舊確認只沿用同一事件／條件的確認鍵；新資料改變條件會重新待確認。已確認待辦保留供稽核。",
         "提醒閾值依提供的範本：首療30天、術後化療56天、未回診90天、追蹤6個月；僅供核對。",
-        "放療完成度／中斷、必要提報、MDT適用性、新療程與CCRT尚需醫療端確認，未輸出自動正常結論。",
-        "本版未提供國定假日自動判斷；不得據空白假日表計算放療中斷工作日。",
+        "依院內1151028規格初篩：必要提報為指定治療後30天內死亡；Palliative只排除對應治療，混合目的不自動排除。仍需人工核對。",
+        "放療僅36011B/36012B計照射日；≤21天同療程缺≥5工作日提示中斷，有36015B重新計畫則黃色提醒。",
+        "放療分次取計畫文字最大值（1～45）；低於80%且停照>14天提示未完成。分段15fx＋5fx以15為分母，需核對處方。",
+        "新療程：放療／化療／標靶／免疫間隔>60天、手術／TACE／RFA>30天，起始距前計畫>183天提醒。非臨床療程定義。",
+        "CCRT僅疑似：放療相鄰≤30天，起訖前後7天有化療。第三四期／復發且無MDT日期提示核對。",
+        "國定假日來自holidays 0.86 TW（含補假與彈性放假）；扣週六日、不扣颱風假，也不把補班週六列工作日，仍需核對院內休診。",
+        "是否符合計畫書僅比較治療類別有無，非指引符合性判定。藥物學名為文字整理，未辨識商品名保留原文，不猜測成分。",
         "統計人數與個案數不同；癌別年齡分布以收案個案計，不是獨立病人人數。",
         "重新清洗必須提供完整原始報表；確認檔不保存五年來源資料。",
     ]
@@ -291,8 +298,10 @@ def export_report(report: CaseReport, output: Path, manual_records, manual_path)
         sheet = table(book,title,headers,records,freeze)
         sheet.column_dimensions[get_column_letter(len(headers))].hidden = True
         sheet.sheet_properties.tabColor = "447765" if "實際" in title else "376E8A"
-    detail = [{"病歷號":e["mrn"],"日期":e["date"],"治療類別":e["category"],"醫令碼":e["code"],"名稱":e["name"],"門住別":e["location"],"資料來源":join_refs(e["references"]),"只計入癌別":e["scope"] or "無部位限制（多癌別需核對）"} for e in report.events]
-    table(book,"治療醫令明細","病歷號|日期|治療類別|醫令碼|名稱|門住別|資料來源|只計入癌別".split("|"),detail,"B2")
+        if title == "病人實際治療總表":
+            live_followup(sheet,len(records))
+    detail = [{"病歷號":e["mrn"],"日期":e["date"],"治療類別":e["category"],"醫令碼":e["code"],"名稱":e["name"],"學名":e.get("generic",""),"備註":e.get("note",""),"門住別":e["location"],"資料來源（檔名／列號）":join_refs(e["references"]),"只計入癌別":e["scope"] or "無部位限制（多癌別需核對）"} for e in report.events]
+    table(book,"治療醫令明細","病歷號|日期|治療類別|醫令碼|名稱|學名|門住別|只計入癌別|備註|資料來源（檔名／列號）".split("|"),detail,"B2")
     valid = [r for r in report.actual if r["癌別"]]
     counts = Counter((r["收案年度"],r["癌別"]) for r in valid)
     year_totals = Counter(r["收案年度"] for r in valid)
@@ -314,8 +323,12 @@ def export_report(report: CaseReport, output: Path, manual_records, manual_path)
         ages[row["癌別"]][category]+=1
     table(book,"癌別年齡分布",["癌別",*bins],[dict({"癌別":k},**{b:v[b] for b in bins}) for k,v in sorted(ages.items())],"B2")
     manual_sheet(book,manual_records,editable=False)
-    holidays=table(book,"國定假日",["日期","名稱","說明"],[])
-    holidays["E1"]="未啟用工作日判斷；沒有把週末以外日期視為全部上班日。"
+    from .patient_stage_review import build_queue, COLUMNS
+    stage_snapshot=table(book,"期別確認紀錄",COLUMNS,build_queue(report.stages).to_dict("records"),"D2")
+    stage_snapshot.cell(1,len(COLUMNS)+2,"僅供查閱；請填 review/病人期別確認.xlsx，存檔關閉後重跑。")
+    calendar=holiday_calendar(min([2019]+[e["date"].year for e in report.events if e["date"]]),max(2027,report.as_of.year))
+    holidays=table(book,"國定假日",["日期","名稱","說明"],[{"日期":d,"名稱":n,"說明":"holidays 0.86 TW；週末不計工作日"} for d,n in sorted(calendar.items())])
+    holidays["E1"]="來源：https://holidays.readthedocs.io/en/main/auto_gen_docs/taiwan/；颱風假未扣，院內休診需核對。"
     table(book,"癌症資格待確認",["病歷號","個案編號","待確認原因","來源檔案"],report.pending,"B2")
     table(book,"來源檢查",["來源檔案","類型","有效列數","說明","期間起","期間迄"],report.audit)
     metrics=[("統計截止日",report.as_of,"來源涵蓋日或 --as-of，不以 TODAY() 改變"),
@@ -341,8 +354,13 @@ def export_report(report: CaseReport, output: Path, manual_records, manual_path)
     summary.column_dimensions["A"].width=30
     summary.column_dimensions["C"].width=66
     summary.auto_filter.ref=f"A1:C{len(metrics)+1}"
+    summary_tables(summary,report)
+    for row in range(1,len(metrics)+2):
+        summary.merge_cells(start_row=row,start_column=3,end_row=row,end_column=13)
     count_end=max(2,len(report.tasks)+1)
-    todo.conditional_formatting.add(f"K2:K{count_end}",FormulaRule(formula=['$K2=""'],fill=PatternFill("solid",fgColor="FFF2CC")))
+    todo.conditional_formatting.add(f"A2:M{count_end}",FormulaRule(formula=['$K2<>""'],fill=PatternFill("solid",fgColor="E7E6E6"),stopIfTrue=True))
+    for severity,color in [("紅","FCE4D6"),("黃","FFF2CC"),("灰","E7E6E6")]:
+        todo.conditional_formatting.add(f"A2:M{count_end}",FormulaRule(formula=[f'$A2="{severity}"'],fill=PatternFill("solid",fgColor=color)))
     book.active=1
     atomic_save(book,output)
     return Path(output)

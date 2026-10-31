@@ -41,7 +41,7 @@ if errorlevel 1 (
 
 if /I not "%COMMAND%"=="check-env" (
     echo 正在檢查必要的 Python 套件...
-    %PYTHON_CMD% -c "import pandas, openpyxl, xlrd, dateutil" >nul 2>nul
+    %PYTHON_CMD% -c "import pandas, openpyxl, xlrd, dateutil, holidays; assert hasattr(holidays, 'TW')" >nul 2>nul
     if errorlevel 1 (
         echo 缺少必要套件，正在依 requirements.txt 安裝...
         %PYTHON_CMD% -m pip install -r requirements.txt

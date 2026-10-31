@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
 import re
+from functools import lru_cache
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -38,7 +39,11 @@ def mrn(value) -> str:
 
 
 def day(value) -> date | None:
-    value = text(value)
+    return _parse_day(text(value))
+
+
+@lru_cache(maxsize=32768)
+def _parse_day(value: str) -> date | None:
     if not value:
         return None
     parsed = pd.to_datetime(_normalize_date_value(value), errors="coerce")
@@ -107,10 +112,16 @@ def classify_order(code, name, rules):
     # labels them radiation_therapy.
     if code == "36015B":
         return "放療計畫", ""
-    if code in {"36012B", "36022B"}:
+    if code in {"63010C", "50014C"}:
+        return "未分類醫令", ""
+    if code in {"67050B", "67051B", "67053B", "70213B", "70214B"}:
+        return "手術", "LC"
+    if code in {"79403B", "79410B", "79417B"}:
+        return "手術", "PR"
+    if code in {"36011B", "36012B", "36022B"}:
         return "放射治療", ""
     if code == "50011C":
-        return "膀胱灌注", "BL"
+        return "化學治療", "BL"
     matches = [r for r in rules if rule_matches(code, name, r)]
     kinds = {TREATMENTS[r["treatment_type"]] for r in matches if r["treatment_type"] in TREATMENTS}
     scopes = {cancer_scope(r.get("cancer_type", "")) for r in matches} - {""}
@@ -230,6 +241,7 @@ def merge_cases(rows):
                 if field_name not in {"結案日期", "結案原因", "死亡日期", "期別", "組合"} and not record.get(field_name):
                     record[field_name] = value
         record["_sources"] = sorted({r["_source"] for r in group})
+        record["_history"] = group[:]
         latest_group = [r for r in group if (r["_period"],r["_source"]) == (group[-1]["_period"],group[-1]["_source"])]
         cancers = {r["_cancer"] for r in latest_group if r["_cancer"]}
         record["_cancer_conflict"] = len(cancers) > 1
